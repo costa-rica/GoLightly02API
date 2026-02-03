@@ -19,6 +19,12 @@ export interface EmailVerificationPayload {
   email: string;
 }
 
+// Payload interface for password reset tokens
+export interface PasswordResetPayload {
+  userId: number;
+  email: string;
+}
+
 // Generate access token (no expiration as per requirements)
 export const generateAccessToken = (userId: number, email: string): string => {
   const payload: AccessTokenPayload = {
@@ -50,4 +56,23 @@ export const verifyEmailVerificationToken = (
   token: string
 ): EmailVerificationPayload => {
   return jwt.verify(token, JWT_SECRET) as EmailVerificationPayload;
+};
+
+// Generate password reset token (30 minutes expiration)
+export const generatePasswordResetToken = (
+  userId: number,
+  email: string
+): string => {
+  const payload: PasswordResetPayload = {
+    userId,
+    email,
+  };
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: "30m" });
+};
+
+// Verify password reset token
+export const verifyPasswordResetToken = (
+  token: string
+): PasswordResetPayload => {
+  return jwt.verify(token, JWT_SECRET) as PasswordResetPayload;
 };

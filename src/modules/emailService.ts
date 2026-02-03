@@ -33,6 +33,12 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+// Validate URL_BASE_WEBSITE environment variable
+if (!process.env.URL_BASE_WEBSITE) {
+  console.error("[FATAL] Missing URL_BASE_WEBSITE environment variable");
+  process.exit(1);
+}
+
 // Send verification email
 export const sendVerificationEmail = async (
   email: string,
@@ -64,5 +70,39 @@ export const sendVerificationEmail = async (
   } catch (error: any) {
     logger.error(`Failed to send verification email to ${email}: ${error.message}`);
     throw new Error(`Failed to send verification email: ${error.message}`);
+  }
+};
+
+// Send password reset email
+export const sendPasswordResetEmail = async (
+  email: string,
+  token: string
+): Promise<void> => {
+  try {
+    // Read HTML template
+    const templatePath = path.join(
+      __dirname,
+      "../templates/passwordReset.html"
+    );
+    let htmlTemplate = fs.readFileSync(templatePath, "utf-8");
+
+    // Build password reset URL
+    const resetUrl = `${process.env.URL_BASE_WEBSITE}/reset-password/${token}`;
+
+    // Replace placeholders in template
+    htmlTemplate = htmlTemplate.replace(/{{resetUrl}}/g, resetUrl);
+
+    // Send email
+    await transporter.sendMail({
+      from: process.env.EMAIL_FROM!,
+      to: email,
+      subject: "Reset your Mantrify password",
+      html: htmlTemplate,
+    });
+
+    logger.info(`Password reset email sent to ${email}`);
+  } catch (error: any) {
+    logger.error(`Failed to send password reset email to ${email}: ${error.message}`);
+    throw new Error(`Failed to send password reset email: ${error.message}`);
   }
 };
