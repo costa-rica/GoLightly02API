@@ -20,6 +20,9 @@ import mantrasRouter from "./routes/mantras";
 // Import error handlers
 import { errorHandler, notFoundHandler } from "./modules/errorHandler";
 
+// Import startup checks
+import { runStartupChecks } from "./modules/onStartUp";
+
 // Async IIFE to allow early exit with proper cleanup
 (async () => {
   try {
@@ -47,11 +50,9 @@ import { errorHandler, notFoundHandler } from "./modules/errorHandler";
       process.exit(1);
     }
 
-    // Initialize database
-    logger.info("Initializing database...");
+    // Initialize database and run startup checks
     initModels();
-    await sequelize.sync();
-    logger.info("Database initialized successfully");
+    await runStartupChecks();
 
     // Create Express app
     const app = express();

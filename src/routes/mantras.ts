@@ -6,6 +6,14 @@ import logger from "../modules/logger";
 import fs from "fs";
 import path from "path";
 
+// Interface for queuer response
+interface QueuerResponse {
+  success: boolean;
+  queueId?: number;
+  finalFilePath?: string;
+  message?: string;
+}
+
 const router = Router();
 
 // Apply authentication middleware to all routes
@@ -85,29 +93,57 @@ router.post(
         }),
       });
 
-      // Get response text
-      const responseText = await response.text();
-
-      // Check if response starts with "Processing batch requests from CSV file"
-      if (!responseText.startsWith("Processing batch requests from CSV file")) {
+      // Check if response is OK
+      if (!response.ok) {
+        const errorText = await response.text();
         logger.error(
-          `Queuer returned unexpected response: ${responseText.substring(0, 200)}`
+          `Queuer returned error (${response.status}): ${errorText}`
         );
         throw new AppError(
           ErrorCodes.QUEUER_ERROR,
-          "Failed to queue mantra for processing",
+          "Queuer service returned an error",
+          response.status,
+          errorText
+        );
+      }
+
+      // Parse JSON response
+      const responseData = (await response.json()) as QueuerResponse;
+
+      // Validate response structure
+      if (!responseData || typeof responseData.success !== "boolean") {
+        logger.error(
+          `Queuer returned invalid response format: ${JSON.stringify(responseData)}`
+        );
+        throw new AppError(
+          ErrorCodes.QUEUER_ERROR,
+          "Invalid response format from queuer service",
           500,
-          responseText
+          JSON.stringify(responseData)
+        );
+      }
+
+      // Check if queuer reported success
+      if (!responseData.success) {
+        logger.error(
+          `Queuer reported failure: ${responseData.message || "Unknown error"}`
+        );
+        throw new AppError(
+          ErrorCodes.QUEUER_ERROR,
+          responseData.message || "Queuer failed to process mantra",
+          500,
+          JSON.stringify(responseData)
         );
       }
 
       logger.info(
-        `Mantra successfully queued for user ${req.user?.userId}: ${responseText}`
+        `Mantra successfully created for user ${req.user?.userId}: queueId=${responseData.queueId}, file=${responseData.finalFilePath}`
       );
 
-      res.status(200).json({
-        message: "Mantra queued for processing successfully",
-        details: responseText,
+      res.status(201).json({
+        message: "Mantra created successfully",
+        queueId: responseData.queueId,
+        filePath: responseData.finalFilePath,
       });
     } catch (error: any) {
       if (error instanceof AppError) {
