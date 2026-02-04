@@ -16,6 +16,7 @@ import cors from "cors";
 // Import routers
 import usersRouter from "./routes/users";
 import mantrasRouter from "./routes/mantras";
+import soundsRouter from "./routes/sounds";
 
 // Import error handlers
 import { errorHandler, notFoundHandler } from "./modules/errorHandler";
@@ -69,6 +70,7 @@ import { runStartupChecks } from "./modules/onStartUp";
     // Register routers
     app.use("/users", usersRouter);
     app.use("/mantras", mantrasRouter);
+    app.use("/sounds", soundsRouter);
 
     // 404 handler for unknown routes
     app.use(notFoundHandler);

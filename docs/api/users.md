@@ -1,4 +1,4 @@
-# Users API
+# Users Router
 
 This router handles user registration, email verification, authentication, and password reset.
 
@@ -15,6 +15,7 @@ Creates a new user account and sends a verification email.
 ### Parameters
 
 Request body:
+
 - `email` (string, required): User's email address
 - `password` (string, required): User's password (minimum 6 characters)
 
@@ -100,6 +101,7 @@ Verifies a user's email address using the token sent during registration.
 ### Parameters
 
 Query parameters:
+
 - `token` (string, required): JWT verification token from registration email
 
 ### Sample Request
@@ -178,6 +180,7 @@ Authenticates a user and returns an access token.
 ### Parameters
 
 Request body:
+
 - `email` (string, required): User's email address
 - `password` (string, required): User's password
 
@@ -256,6 +259,7 @@ Initiates a password reset by sending a reset link to the user's email address.
 ### Parameters
 
 Request body:
+
 - `email` (string, required): User's email address
 
 ### Sample Request
@@ -314,6 +318,7 @@ Resets a user's password using a valid reset token.
 ### Parameters
 
 Request body:
+
 - `token` (string, required): JWT password reset token from email
 - `newPassword` (string, required): New password (minimum 6 characters)
 
