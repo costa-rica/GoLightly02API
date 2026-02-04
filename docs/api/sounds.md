@@ -2,13 +2,13 @@
 
 This router handles sound file management including retrieval and upload of .mp3 files.
 
-All endpoints require authentication via JWT access token in the Authorization header.
+Authentication is required for upload and delete endpoints, but the sound_files endpoint is public.
 
 ## GET /sounds/sound_files
 
 Retrieves a list of all available sound files that can be used in mantra creation.
 
-- Authentication: Required
+- Authentication: Not Required (public endpoint)
 - Returns all sound files with their metadata
 
 ### Parameters
@@ -18,8 +18,7 @@ None
 ### Sample Request
 
 ```bash
-curl --location 'http://localhost:3000/sounds/sound_files' \
---header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+curl --location 'http://localhost:3000/sounds/sound_files'
 ```
 
 ### Sample Response
@@ -44,18 +43,6 @@ curl --location 'http://localhost:3000/sounds/sound_files' \
 ```
 
 ### Error Responses
-
-#### Missing or invalid token (401)
-
-```json
-{
-  "error": {
-    "code": "INVALID_TOKEN",
-    "message": "Invalid or expired token",
-    "status": 401
-  }
-}
-```
 
 #### Internal server error (500)
 

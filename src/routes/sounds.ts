@@ -22,10 +22,7 @@ const upload = multer({
   },
 });
 
-// Apply authentication middleware to all routes
-router.use(authMiddleware);
-
-// GET /sounds/sound_files
+// GET /sounds/sound_files (public endpoint - no authentication required)
 router.get(
   "/sound_files",
   async (req: Request, res: Response, next: NextFunction) => {
@@ -36,7 +33,7 @@ router.get(
       });
 
       logger.info(
-        `Sound files retrieved for user ${req.user?.userId}: ${soundFiles.length} files`
+        `Sound files retrieved: ${soundFiles.length} files`
       );
 
       res.status(200).json({
@@ -56,9 +53,10 @@ router.get(
   }
 );
 
-// POST /sounds/upload
+// POST /sounds/upload (protected endpoint - requires authentication)
 router.post(
   "/upload",
+  authMiddleware,
   upload.single("file"),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -202,9 +200,10 @@ router.post(
   }
 );
 
-// DELETE /sounds/sound_file/:id
+// DELETE /sounds/sound_file/:id (protected endpoint - requires authentication)
 router.delete(
   "/sound_file/:id",
+  authMiddleware,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const soundFileId = parseInt(req.params.id, 10);
