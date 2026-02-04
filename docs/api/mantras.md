@@ -335,32 +335,25 @@ curl --location 'http://localhost:3000/mantras/all?includePrivate=true' \
   "mantrasArray": [
     {
       "id": 1,
-      "mantraArray": [
-        {
-          "id": 1,
-          "pause_duration": "3.0"
-        },
-        {
-          "id": 2,
-          "text": "Hello world",
-          "voice_id": "nPczCjzI2devNBz1zQrb",
-          "speed": "0.85"
-        }
-      ],
-      "filename": "output_20260203_113759.mp3",
+      "title": "output_20260203_222033",
+      "description": "Morning meditation session",
       "visibility": "public",
-      "createdAt": "2026-02-03T11:37:59.000Z",
-      "updatedAt": "2026-02-03T11:37:59.000Z",
-      "listens": 42
+      "filename": "output_20260203_222033.mp3",
+      "filePath": "/Users/nick/Documents/_project_resources/Mantrify/audio_concatenator_output/20260203/",
+      "listens": 42,
+      "createdAt": "2026-02-03T22:20:33.925Z",
+      "updatedAt": "2026-02-03T22:28:55.436Z"
     },
     {
       "id": 2,
-      "mantraArray": [...],
-      "filename": "output_20260203_120000.mp3",
+      "title": "output_20260204_103015",
+      "description": null,
       "visibility": "private",
-      "createdAt": "2026-02-03T12:00:00.000Z",
-      "updatedAt": "2026-02-03T12:00:00.000Z",
-      "listens": 5
+      "filename": "output_20260204_103015.mp3",
+      "filePath": "/Users/nick/Documents/_project_resources/Mantrify/audio_concatenator_output/20260204/",
+      "listens": 5,
+      "createdAt": "2026-02-04T10:30:15.125Z",
+      "updatedAt": "2026-02-04T10:35:22.789Z"
     }
   ]
 }
@@ -405,7 +398,16 @@ When `includePrivate=true` is requested without authentication:
   - Anonymous users will receive a 401 error
 - The `listens` field is calculated by summing all listen counts from the `ContractUserMantraListen` table for each mantra
 - Listen counts are shown for all users (authenticated and anonymous)
-- All fields from the Mantras table are included in the response
+- All fields from the Mantras table are included in the response:
+  - `id`: Unique identifier for the mantra
+  - `title`: Name/title of the mantra
+  - `description`: Optional description text (can be null)
+  - `visibility`: "public" or "private"
+  - `filename`: Name of the MP3 file
+  - `filePath`: Full directory path to the mantra file
+  - `listens`: Total listen count (calculated)
+  - `createdAt`: Timestamp when mantra was created
+  - `updatedAt`: Timestamp when mantra was last updated
 - Uses optional authentication middleware, allowing both authenticated and anonymous access
 
 ## POST /mantras/favorite/:mantraId/:trueOrFalse
