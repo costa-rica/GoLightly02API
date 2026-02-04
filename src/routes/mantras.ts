@@ -1,5 +1,9 @@
 import { Router, Request, Response, NextFunction } from "express";
-import { Mantra, ContractUsersMantras } from "mantrify01db";
+import {
+  Mantra,
+  ContractUsersMantras,
+  ContractUserMantraListen,
+} from "mantrify01db";
 import { authMiddleware } from "../modules/authMiddleware";
 import { AppError, ErrorCodes } from "../modules/errorHandler";
 import logger from "../modules/logger";
@@ -130,6 +134,110 @@ router.post(
           )
         );
       }
+    }
+  }
+);
+
+// GET /mantras/all
+router.get(
+  "/all",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // Parse includePrivate query parameter
+      const includePrivate = req.query.includePrivate === "true";
+
+      // Get user's owned mantras via ContractUsersMantras
+      const userMantras = await ContractUsersMantras.findAll({
+        where: {
+          userId: req.user?.userId,
+        },
+      });
+
+      const userMantraIds = userMantras.map(
+        (contract) => contract.get("mantraId") as number
+      );
+
+      // Build query conditions
+      let mantras: any[];
+
+      if (includePrivate) {
+        // Get all public mantras + user's private mantras
+        const publicMantras = await Mantra.findAll({
+          where: {
+            visibility: { $ne: "private" } as any,
+          },
+        });
+
+        const userPrivateMantras = await Mantra.findAll({
+          where: {
+            id: { $in: userMantraIds } as any,
+            visibility: "private",
+          },
+        });
+
+        // Combine and deduplicate
+        const allMantras = [...publicMantras, ...userPrivateMantras];
+        const uniqueMantraIds = new Set<number>();
+        mantras = allMantras.filter((mantra) => {
+          const id = mantra.get("id") as number;
+          if (uniqueMantraIds.has(id)) {
+            return false;
+          }
+          uniqueMantraIds.add(id);
+          return true;
+        });
+      } else {
+        // Get only public mantras
+        mantras = await Mantra.findAll({
+          where: {
+            visibility: { $ne: "private" } as any,
+          },
+        });
+      }
+
+      // Calculate listens for each mantra
+      const mantrasWithListens = await Promise.all(
+        mantras.map(async (mantra) => {
+          const mantraId = mantra.get("id") as number;
+
+          // Get all listen records for this mantra
+          const listenRecords = await ContractUserMantraListen.findAll({
+            where: {
+              mantraId,
+            },
+          });
+
+          // Sum up the listen counts
+          const totalListens = listenRecords.reduce((sum: number, record: any) => {
+            const listenCount = record.get("listenCount") as number;
+            return sum + (listenCount || 0);
+          }, 0);
+
+          // Return mantra with all fields plus listens
+          return {
+            ...mantra.get({ plain: true }),
+            listens: totalListens,
+          };
+        })
+      );
+
+      logger.info(
+        `Mantras retrieved for user ${req.user?.userId}: ${mantrasWithListens.length} mantras (includePrivate: ${includePrivate})`
+      );
+
+      res.status(200).json({
+        mantras: mantrasWithListens,
+      });
+    } catch (error: any) {
+      logger.error(`Failed to retrieve mantras: ${error.message}`);
+      next(
+        new AppError(
+          ErrorCodes.INTERNAL_ERROR,
+          "Failed to retrieve mantras",
+          500,
+          error.message
+        )
+      );
     }
   }
 );

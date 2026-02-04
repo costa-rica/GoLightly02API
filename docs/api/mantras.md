@@ -118,6 +118,109 @@ Sound file element:
 - `id` (number): Unique identifier for the element
 - `sound_file` (string): Filename from the sound_files endpoint
 
+## GET /mantras/all
+
+Retrieves a list of mantras with aggregated listen counts.
+
+- Authentication: Required
+- Returns all public mantras by default
+- Optionally includes user's private mantras when includePrivate=true
+- Each mantra includes a `listens` field with total listen count
+
+### Parameters
+
+Query parameters:
+
+- `includePrivate` (boolean, optional): Set to "true" to include user's private mantras along with public mantras
+
+### Sample Request
+
+Without private mantras:
+
+```bash
+curl --location 'http://localhost:3000/mantras/all' \
+--header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+```
+
+With private mantras:
+
+```bash
+curl --location 'http://localhost:3000/mantras/all?includePrivate=true' \
+--header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+```
+
+### Sample Response
+
+```json
+{
+  "mantras": [
+    {
+      "id": 1,
+      "mantraArray": [
+        {
+          "id": 1,
+          "pause_duration": "3.0"
+        },
+        {
+          "id": 2,
+          "text": "Hello world",
+          "voice_id": "nPczCjzI2devNBz1zQrb",
+          "speed": "0.85"
+        }
+      ],
+      "filename": "output_20260203_113759.mp3",
+      "visibility": "public",
+      "createdAt": "2026-02-03T11:37:59.000Z",
+      "updatedAt": "2026-02-03T11:37:59.000Z",
+      "listens": 42
+    },
+    {
+      "id": 2,
+      "mantraArray": [...],
+      "filename": "output_20260203_120000.mp3",
+      "visibility": "private",
+      "createdAt": "2026-02-03T12:00:00.000Z",
+      "updatedAt": "2026-02-03T12:00:00.000Z",
+      "listens": 5
+    }
+  ]
+}
+```
+
+### Error Responses
+
+#### Missing or invalid token (401)
+
+```json
+{
+  "error": {
+    "code": "INVALID_TOKEN",
+    "message": "Invalid or expired token",
+    "status": 401
+  }
+}
+```
+
+#### Internal server error (500)
+
+```json
+{
+  "error": {
+    "code": "INTERNAL_ERROR",
+    "message": "Failed to retrieve mantras",
+    "status": 500
+  }
+}
+```
+
+### Notes
+
+- Public mantras are those where `visibility` is not "private"
+- When `includePrivate=false` or omitted, only public mantras are returned
+- When `includePrivate=true`, all public mantras plus the authenticated user's private mantras are returned
+- The `listens` field is calculated by summing all listen counts from the `ContractUserMantraListen` table for each mantra
+- All fields from the Mantras table are included in the response
+
 ## DELETE /mantras/:id
 
 Deletes a mantra and its associated MP3 file.
