@@ -4,6 +4,7 @@ import {
   ContractUsersMantras,
   ContractUserMantraListen,
 } from "mantrify01db";
+import { Op } from "sequelize";
 import { authMiddleware } from "../modules/authMiddleware";
 import { optionalAuthMiddleware } from "../modules/optionalAuthMiddleware";
 import { AppError, ErrorCodes } from "../modules/errorHandler";
@@ -266,13 +267,13 @@ router.get(
         // Get all public mantras + user's private mantras
         const publicMantras = await Mantra.findAll({
           where: {
-            visibility: { $ne: "private" } as any,
+            visibility: { [Op.ne]: "private" },
           },
         });
 
         const userPrivateMantras = await Mantra.findAll({
           where: {
-            id: { $in: userMantraIds } as any,
+            id: { [Op.in]: userMantraIds },
             visibility: "private",
           },
         });
@@ -292,7 +293,7 @@ router.get(
         // Get only public mantras (for anonymous users or when includePrivate=false)
         mantras = await Mantra.findAll({
           where: {
-            visibility: { $ne: "private" } as any,
+            visibility: { [Op.ne]: "private" },
           },
         });
       }

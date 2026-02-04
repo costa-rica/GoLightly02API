@@ -24,6 +24,7 @@
     "mantrify01db": "file:../Mantrify01Db",
     "multer": "^2.0.2",
     "nodemailer": "^7.0.13",
+    "sequelize": "^6.37.7",
     "winston": "^3.11.0"
   },
   "devDependencies": {
