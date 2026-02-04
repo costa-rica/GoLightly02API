@@ -10,6 +10,7 @@ Admin endpoints provide elevated access to:
 - View all users in the system
 - View all mantras regardless of visibility
 - Delete any mantra regardless of ownership
+- View all queue records from the processing queue
 
 ## GET /admin/users
 
@@ -360,3 +361,115 @@ Success (200):
 - If the file doesn't exist on disk, the database record is still deleted
 - Supports both filePath (if specified in database) and PATH_MP3_OUTPUT fallback
 - All related records in junction tables should be handled by database cascading rules
+
+## GET /admin/queuer
+
+Retrieves all records from the Queue table showing mantra processing status.
+
+- Authentication: Required
+- Admin Status: Required (isAdmin=true)
+- Returns all queue records ordered by ID (most recent first)
+- Shows the status of all mantra creation jobs
+
+### Parameters
+
+None
+
+### Sample Request
+
+```bash
+curl --location 'http://localhost:3000/admin/queuer' \
+--header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+```
+
+### Sample Response
+
+Success (200):
+
+```json
+{
+  "queue": [
+    {
+      "id": 5,
+      "userId": 2,
+      "status": "done",
+      "jobFilename": "job_20260204_140530.csv",
+      "createdAt": "2026-02-04T14:05:30.000Z",
+      "updatedAt": "2026-02-04T14:06:15.000Z"
+    },
+    {
+      "id": 4,
+      "userId": 1,
+      "status": "concatenator",
+      "jobFilename": "job_20260204_135212.csv",
+      "createdAt": "2026-02-04T13:52:12.000Z",
+      "updatedAt": "2026-02-04T13:53:45.000Z"
+    },
+    {
+      "id": 3,
+      "userId": 2,
+      "status": "queued",
+      "jobFilename": "job_20260204_131005.csv",
+      "createdAt": "2026-02-04T13:10:05.000Z",
+      "updatedAt": "2026-02-04T13:10:05.000Z"
+    }
+  ]
+}
+```
+
+### Error Responses
+
+#### Missing or invalid token (401)
+
+```json
+{
+  "error": {
+    "code": "INVALID_TOKEN",
+    "message": "Invalid or expired token",
+    "status": 401
+  }
+}
+```
+
+#### Admin access required (403)
+
+```json
+{
+  "error": {
+    "code": "UNAUTHORIZED_ACCESS",
+    "message": "Admin access required",
+    "status": 403
+  }
+}
+```
+
+#### Internal server error (500)
+
+```json
+{
+  "error": {
+    "code": "INTERNAL_ERROR",
+    "message": "Failed to retrieve queue records",
+    "status": 500
+  }
+}
+```
+
+### Queue Status Values
+
+The `status` field indicates the current processing stage:
+
+- **queued**: Job is waiting to be processed
+- **started**: Job processing has begun
+- **elevenlabs**: Currently processing text-to-speech with ElevenLabs
+- **concatenator**: Currently concatenating audio files
+- **done**: Job completed successfully
+
+### Notes
+
+- Records are returned in descending order by ID (most recent first)
+- The `jobFilename` is the CSV file stored in the Mantrify01Queuer service
+- Each queue record is associated with a user via `userId`
+- The Queue table is managed by the Mantrify01Queuer service
+- This endpoint provides visibility into the mantra creation pipeline for monitoring and debugging
+- All fields from the Queue table are included in the response

@@ -3,6 +3,7 @@ import {
   User,
   Mantra,
   ContractUserMantraListen,
+  Queue,
 } from "mantrify01db";
 import { authMiddleware } from "../modules/authMiddleware";
 import { AppError, ErrorCodes } from "../modules/errorHandler";
@@ -267,6 +268,37 @@ router.delete(
           )
         );
       }
+    }
+  }
+);
+
+// GET /admin/queuer
+router.get(
+  "/queuer",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // Query all queue records
+      const queueRecords = await Queue.findAll({
+        order: [["id", "DESC"]], // Most recent first
+      });
+
+      logger.info(
+        `Admin user ${req.user?.userId} retrieved ${queueRecords.length} queue records`
+      );
+
+      res.status(200).json({
+        queue: queueRecords,
+      });
+    } catch (error: any) {
+      logger.error(`Failed to retrieve queue records: ${error.message}`);
+      next(
+        new AppError(
+          ErrorCodes.INTERNAL_ERROR,
+          "Failed to retrieve queue records",
+          500,
+          error.message
+        )
+      );
     }
   }
 );
