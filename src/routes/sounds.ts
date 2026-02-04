@@ -1,5 +1,5 @@
 import { Router, Request, Response, NextFunction } from "express";
-import { SoundFiles } from "mantrify01db";
+import { SoundFiles, Mantra, ContractUsersMantras } from "mantrify01db";
 import { authMiddleware } from "../modules/authMiddleware";
 import { AppError, ErrorCodes } from "../modules/errorHandler";
 import logger from "../modules/logger";
@@ -193,6 +193,173 @@ router.post(
           new AppError(
             ErrorCodes.INTERNAL_ERROR,
             "Failed to upload sound file",
+            500,
+            error.message
+          )
+        );
+      }
+    }
+  }
+);
+
+// DELETE /sounds/sound_file/:id
+router.delete(
+  "/sound_file/:id",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const soundFileId = parseInt(req.params.id, 10);
+
+      // Validate ID
+      if (isNaN(soundFileId)) {
+        throw new AppError(
+          ErrorCodes.VALIDATION_ERROR,
+          "Invalid sound file ID",
+          400
+        );
+      }
+
+      // Get deleteLinkedMantras from request body
+      const { deleteLinkedMantras } = req.body;
+      const shouldDeleteLinkedMantras = deleteLinkedMantras === true;
+
+      // Find sound file in database
+      const soundFile = await SoundFiles.findByPk(soundFileId);
+
+      if (!soundFile) {
+        throw new AppError(
+          ErrorCodes.VALIDATION_ERROR,
+          "Sound file not found",
+          404
+        );
+      }
+
+      const filename = soundFile.filename as string;
+
+      // Find all mantras that use this sound file
+      // Check if mantraArray contains an element with this sound_file
+      const allMantras = await Mantra.findAll();
+      const linkedMantras = allMantras.filter((mantra) => {
+        const mantraArray = mantra.get("mantraArray") as any[];
+        if (!Array.isArray(mantraArray)) return false;
+
+        return mantraArray.some(
+          (element) => element.sound_file === filename
+        );
+      });
+
+      // If mantras are using this sound file and deleteLinkedMantras is false
+      if (linkedMantras.length > 0 && !shouldDeleteLinkedMantras) {
+        logger.warn(
+          `Cannot delete sound file ${filename}: used by ${linkedMantras.length} mantra(s)`
+        );
+        throw new AppError(
+          ErrorCodes.VALIDATION_ERROR,
+          `Cannot delete sound file because it is being used by mantras`,
+          409,
+          `This sound file is used by ${linkedMantras.length} mantra(s). Set deleteLinkedMantras to true to delete them.`
+        );
+      }
+
+      // Delete linked mantras if requested
+      if (linkedMantras.length > 0 && shouldDeleteLinkedMantras) {
+        logger.info(
+          `Deleting ${linkedMantras.length} mantra(s) linked to sound file ${filename}`
+        );
+
+        const outputPath = process.env.PATH_MP3_OUTPUT;
+        if (!outputPath) {
+          throw new AppError(
+            ErrorCodes.INTERNAL_ERROR,
+            "Mantra output path not configured",
+            500
+          );
+        }
+
+        for (const mantra of linkedMantras) {
+          const mantraId = mantra.get("id") as number;
+          const mantraFilename = mantra.get("filename") as string | null;
+
+          // Delete mantra file if it exists
+          if (mantraFilename) {
+            const mantraFilePath = path.join(outputPath, mantraFilename);
+
+            if (fs.existsSync(mantraFilePath)) {
+              try {
+                fs.unlinkSync(mantraFilePath);
+                logger.info(`Deleted mantra file: ${mantraFilePath}`);
+              } catch (error: any) {
+                logger.error(
+                  `Failed to delete mantra file ${mantraFilePath}: ${error.message}`
+                );
+              }
+            }
+          }
+
+          // Delete mantra from database
+          await mantra.destroy();
+          logger.info(`Deleted mantra ${mantraId} linked to sound file ${filename}`);
+        }
+      }
+
+      // Delete sound file from filesystem
+      const soundFilesPath = process.env.PATH_MP3_SOUND_FILES;
+      if (!soundFilesPath) {
+        throw new AppError(
+          ErrorCodes.INTERNAL_ERROR,
+          "Sound files path not configured",
+          500
+        );
+      }
+
+      const soundFilePath = path.join(soundFilesPath, filename);
+      if (fs.existsSync(soundFilePath)) {
+        try {
+          fs.unlinkSync(soundFilePath);
+          logger.info(`Deleted sound file: ${soundFilePath}`);
+        } catch (error: any) {
+          logger.error(
+            `Failed to delete sound file ${soundFilePath}: ${error.message}`
+          );
+          throw new AppError(
+            ErrorCodes.INTERNAL_ERROR,
+            "Failed to delete sound file from server",
+            500,
+            error.message
+          );
+        }
+      } else {
+        logger.warn(
+          `Sound file not found on filesystem: ${soundFilePath}. Proceeding with database deletion.`
+        );
+      }
+
+      // Delete sound file from database
+      await soundFile.destroy();
+
+      logger.info(
+        `Sound file ${soundFileId} deleted by user ${req.user?.userId}${
+          linkedMantras.length > 0
+            ? ` (with ${linkedMantras.length} linked mantra(s))`
+            : ""
+        }`
+      );
+
+      res.status(200).json({
+        message: "Sound file deleted successfully",
+        soundFileId,
+        deletedMantrasCount: linkedMantras.length,
+      });
+    } catch (error: any) {
+      if (error instanceof AppError) {
+        next(error);
+      } else {
+        logger.error(
+          `Failed to delete sound file ${req.params.id}: ${error.message}`
+        );
+        next(
+          new AppError(
+            ErrorCodes.INTERNAL_ERROR,
+            "Failed to delete sound file",
             500,
             error.message
           )
