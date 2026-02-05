@@ -144,9 +144,9 @@ When the endpoint is called:
 
 - **If authenticated**:
   - Creates or increments `listenCount` in `ContractUserMantraListen` table for the user-mantra pair
-  - Increments `listens` field in `Mantras` table by 1
+  - Increments `listenCount` field in `Mantras` table by 1
 - **If anonymous**:
-  - Only increments `listens` field in `Mantras` table by 1
+  - Only increments `listenCount` field in `Mantras` table by 1
 
 ### Sample Request
 
@@ -292,12 +292,12 @@ const AudioPlayer = ({ mantraId, authToken }) => {
 
 ## GET /mantras/all
 
-Retrieves a list of mantras with aggregated listen counts.
+Retrieves a list of mantras with total listen counts.
 
 - Authentication: Optional (required only if includePrivate=true)
 - Returns all public mantras by default
 - Optionally includes user's private mantras when includePrivate=true (requires authentication)
-- Each mantra includes a `listens` field with total listen count
+- Each mantra includes a `listenCount` field with total listen count
 - Works for both authenticated and anonymous users
 
 ### Parameters
@@ -340,7 +340,7 @@ curl --location 'http://localhost:3000/mantras/all?includePrivate=true' \
       "visibility": "public",
       "filename": "output_20260203_222033.mp3",
       "filePath": "/Users/nick/Documents/_project_resources/Mantrify/audio_concatenator_output/20260203/",
-      "listens": 42,
+      "listenCount": 42,
       "createdAt": "2026-02-03T22:20:33.925Z",
       "updatedAt": "2026-02-03T22:28:55.436Z"
     },
@@ -351,7 +351,7 @@ curl --location 'http://localhost:3000/mantras/all?includePrivate=true' \
       "visibility": "private",
       "filename": "output_20260204_103015.mp3",
       "filePath": "/Users/nick/Documents/_project_resources/Mantrify/audio_concatenator_output/20260204/",
-      "listens": 5,
+      "listenCount": 5,
       "createdAt": "2026-02-04T10:30:15.125Z",
       "updatedAt": "2026-02-04T10:35:22.789Z"
     }
@@ -396,7 +396,7 @@ When `includePrivate=true` is requested without authentication:
   - Requires authentication
   - Returns all public mantras plus the authenticated user's private mantras
   - Anonymous users will receive a 401 error
-- The `listens` field is calculated by summing all listen counts from the `ContractUserMantraListen` table for each mantra
+- The `listenCount` field is read directly from the `Mantras` table for each mantra
 - Listen counts are shown for all users (authenticated and anonymous)
 - All fields from the Mantras table are included in the response:
   - `id`: Unique identifier for the mantra
@@ -405,7 +405,7 @@ When `includePrivate=true` is requested without authentication:
   - `visibility`: "public" or "private"
   - `filename`: Name of the MP3 file
   - `filePath`: Full directory path to the mantra file
-  - `listens`: Total listen count (calculated)
+  - `listenCount`: Total listen count
   - `createdAt`: Timestamp when mantra was created
   - `updatedAt`: Timestamp when mantra was last updated
 - Uses optional authentication middleware, allowing both authenticated and anonymous access
