@@ -178,6 +178,11 @@ const mantraWithSounds = await Mantra.findByPk(mantraId, {
   include: [{ association: "soundFiles" }],
 });
 
+// Find mantra with user listen records
+const mantraWithListens = await Mantra.findByPk(mantraId, {
+  include: [{ association: "contractUserMantraListenCount" }],
+});
+
 // Find sound file with associated mantras
 const soundFileWithMantras = await SoundFiles.findByPk(soundFileId, {
   include: [{ association: "mantras" }],
@@ -250,7 +255,7 @@ try {
 | visibility  | visibility  | NO   | default `'private'`                                                |
 | filename    | filename    | YES  | filename of the audio file                                         |
 | filePath    | filePath    | YES  | path to the audio file                                             |
-| listens     | integer     | NO   | default `0`, tracks non-registered user listens for public mantras |
+| listenCount | integer     | NO   | default `0`, tracks non-registered user listens for public mantras |
 
 ### Table: `ContractUsersMantras`
 

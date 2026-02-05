@@ -35,7 +35,7 @@ router.get(
         throw new AppError(
           ErrorCodes.VALIDATION_ERROR,
           "Invalid mantra ID",
-          400
+          400,
         );
       }
 
@@ -46,7 +46,7 @@ router.get(
         throw new AppError(
           ErrorCodes.MANTRA_NOT_FOUND,
           "Mantra not found",
-          404
+          404,
         );
       }
 
@@ -59,7 +59,7 @@ router.get(
           throw new AppError(
             ErrorCodes.AUTH_FAILED,
             "Authentication required to access private mantras",
-            401
+            401,
           );
         }
 
@@ -75,7 +75,7 @@ router.get(
           throw new AppError(
             ErrorCodes.UNAUTHORIZED_ACCESS,
             "You do not have permission to access this mantra",
-            403
+            403,
           );
         }
       }
@@ -88,7 +88,7 @@ router.get(
         throw new AppError(
           ErrorCodes.INTERNAL_ERROR,
           "Mantra file information not found",
-          500
+          500,
         );
       }
 
@@ -105,7 +105,7 @@ router.get(
           throw new AppError(
             ErrorCodes.INTERNAL_ERROR,
             "Mantra output path not configured",
-            500
+            500,
           );
         }
         fullFilePath = path.join(outputPath, filename);
@@ -117,7 +117,7 @@ router.get(
         throw new AppError(
           ErrorCodes.MANTRA_NOT_FOUND,
           "Mantra audio file not found",
-          404
+          404,
         );
       }
 
@@ -128,7 +128,7 @@ router.get(
         throw new AppError(
           ErrorCodes.MANTRA_NOT_FOUND,
           "Mantra audio file not found",
-          404
+          404,
         );
       }
 
@@ -138,17 +138,18 @@ router.get(
         const userId = req.user.userId;
 
         // Find or create ContractUserMantraListen record
-        const [listenRecord, created] = await ContractUserMantraListen.findOrCreate({
-          where: {
-            userId,
-            mantraId,
-          },
-          defaults: {
-            userId,
-            mantraId,
-            listenCount: 1,
-          },
-        });
+        const [listenRecord, created] =
+          await ContractUserMantraListen.findOrCreate({
+            where: {
+              userId,
+              mantraId,
+            },
+            defaults: {
+              userId,
+              mantraId,
+              listenCount: 1,
+            },
+          });
 
         // If record already existed, increment listenCount
         if (!created) {
@@ -159,19 +160,19 @@ router.get(
         }
 
         // Increment listens in Mantras table
-        const currentListens = (mantra.get("listens") as number) || 0;
+        const currentListens = (mantra.get("listenCount") as number) || 0;
         await mantra.update({
-          listens: currentListens + 1,
+          listenCount: currentListens + 1,
         });
 
         logger.info(
-          `Mantra ${mantraId} streamed by user ${userId} (listen count: ${created ? 1 : (listenRecord.get("listenCount") as number)})`
+          `Mantra ${mantraId} streamed by user ${userId} (listen count: ${created ? 1 : (listenRecord.get("listenCount") as number)})`,
         );
       } else {
         // Anonymous user - only track in Mantras table
-        const currentListens = (mantra.get("listens") as number) || 0;
+        const currentListens = (mantra.get("listenCount") as number) || 0;
         await mantra.update({
-          listens: currentListens + 1,
+          listenCount: currentListens + 1,
         });
 
         logger.info(`Mantra ${mantraId} streamed anonymously`);
@@ -216,19 +217,19 @@ router.get(
         next(error);
       } else {
         logger.error(
-          `Failed to stream mantra ${req.params.id}: ${error.message}`
+          `Failed to stream mantra ${req.params.id}: ${error.message}`,
         );
         next(
           new AppError(
             ErrorCodes.INTERNAL_ERROR,
             "Failed to stream mantra",
             500,
-            error.message
-          )
+            error.message,
+          ),
         );
       }
     }
-  }
+  },
 );
 
 // GET /mantras/all - Retrieve mantras with optional authentication
@@ -245,7 +246,7 @@ router.get(
         throw new AppError(
           ErrorCodes.AUTH_FAILED,
           "Authentication required to include private mantras",
-          401
+          401,
         );
       }
 
@@ -261,7 +262,7 @@ router.get(
         });
 
         const userMantraIds = userMantras.map(
-          (contract) => contract.get("mantraId") as number
+          (contract) => contract.get("mantraId") as number,
         );
 
         // Get all public mantras + user's private mantras
@@ -298,34 +299,19 @@ router.get(
         });
       }
 
-      // Calculate listens for each mantra
-      const mantrasWithListens = await Promise.all(
-        mantras.map(async (mantra) => {
-          const mantraId = mantra.get("id") as number;
+      const mantrasWithListens = mantras.map((mantra) => {
+        const plainMantra = mantra.get({ plain: true }) as {
+          listenCount?: number | null;
+        };
 
-          // Get all listen records for this mantra
-          const listenRecords = await ContractUserMantraListen.findAll({
-            where: {
-              mantraId,
-            },
-          });
-
-          // Sum up the listen counts
-          const totalListens = listenRecords.reduce((sum: number, record: any) => {
-            const listenCount = record.get("listenCount") as number;
-            return sum + (listenCount || 0);
-          }, 0);
-
-          // Return mantra with all fields plus listens
-          return {
-            ...mantra.get({ plain: true }),
-            listens: totalListens,
-          };
-        })
-      );
+        return {
+          ...plainMantra,
+          listenCount: plainMantra.listenCount ?? 0,
+        };
+      });
 
       logger.info(
-        `Mantras retrieved${req.user ? ` for user ${req.user.userId}` : " anonymously"}: ${mantrasWithListens.length} mantras (includePrivate: ${includePrivate})`
+        `Mantras retrieved${req.user ? ` for user ${req.user.userId}` : " anonymously"}: ${mantrasWithListens.length} mantras (includePrivate: ${includePrivate})`,
       );
 
       res.status(200).json({
@@ -341,12 +327,12 @@ router.get(
             ErrorCodes.INTERNAL_ERROR,
             "Failed to retrieve mantras",
             500,
-            error.message
-          )
+            error.message,
+          ),
         );
       }
     }
-  }
+  },
 );
 
 // Apply authentication middleware to all routes below this point
@@ -365,7 +351,7 @@ router.post(
         throw new AppError(
           ErrorCodes.VALIDATION_ERROR,
           "Invalid mantra ID",
-          400
+          400,
         );
       }
 
@@ -374,7 +360,7 @@ router.post(
         throw new AppError(
           ErrorCodes.VALIDATION_ERROR,
           "trueOrFalse parameter must be 'true' or 'false'",
-          400
+          400,
         );
       }
 
@@ -386,25 +372,26 @@ router.post(
         throw new AppError(
           ErrorCodes.MANTRA_NOT_FOUND,
           "Mantra not found",
-          404
+          404,
         );
       }
 
       const userId = req.user!.userId;
 
       // Find or create ContractUserMantraListen record
-      const [listenRecord, created] = await ContractUserMantraListen.findOrCreate({
-        where: {
-          userId,
-          mantraId,
-        },
-        defaults: {
-          userId,
-          mantraId,
-          listenCount: 0,
-          favorite: favoriteValue,
-        },
-      });
+      const [listenRecord, created] =
+        await ContractUserMantraListen.findOrCreate({
+          where: {
+            userId,
+            mantraId,
+          },
+          defaults: {
+            userId,
+            mantraId,
+            listenCount: 0,
+            favorite: favoriteValue,
+          },
+        });
 
       // If record already existed, update the favorite field
       if (!created) {
@@ -414,7 +401,7 @@ router.post(
       }
 
       logger.info(
-        `User ${userId} ${favoriteValue ? "favorited" : "unfavorited"} mantra ${mantraId}`
+        `User ${userId} ${favoriteValue ? "favorited" : "unfavorited"} mantra ${mantraId}`,
       );
 
       res.status(200).json({
@@ -427,19 +414,19 @@ router.post(
         next(error);
       } else {
         logger.error(
-          `Failed to update favorite for mantra ${req.params.mantraId}: ${error.message}`
+          `Failed to update favorite for mantra ${req.params.mantraId}: ${error.message}`,
         );
         next(
           new AppError(
             ErrorCodes.INTERNAL_ERROR,
             "Failed to update favorite status",
             500,
-            error.message
-          )
+            error.message,
+          ),
         );
       }
     }
-  }
+  },
 );
 
 // POST /mantras/create
@@ -454,7 +441,7 @@ router.post(
         throw new AppError(
           ErrorCodes.VALIDATION_ERROR,
           "mantraArray is required and must be an array",
-          400
+          400,
         );
       }
 
@@ -464,12 +451,12 @@ router.post(
         throw new AppError(
           ErrorCodes.INTERNAL_ERROR,
           "Queuer URL not configured",
-          500
+          500,
         );
       }
 
       logger.info(
-        `User ${req.user?.userId} creating mantra with ${mantraArray.length} elements`
+        `User ${req.user?.userId} creating mantra with ${mantraArray.length} elements`,
       );
 
       // Send request to queuer
@@ -489,13 +476,13 @@ router.post(
       if (!response.ok) {
         const errorText = await response.text();
         logger.error(
-          `Queuer returned error (${response.status}): ${errorText}`
+          `Queuer returned error (${response.status}): ${errorText}`,
         );
         throw new AppError(
           ErrorCodes.QUEUER_ERROR,
           "Queuer service returned an error",
           response.status,
-          errorText
+          errorText,
         );
       }
 
@@ -505,31 +492,31 @@ router.post(
       // Validate response structure
       if (!responseData || typeof responseData.success !== "boolean") {
         logger.error(
-          `Queuer returned invalid response format: ${JSON.stringify(responseData)}`
+          `Queuer returned invalid response format: ${JSON.stringify(responseData)}`,
         );
         throw new AppError(
           ErrorCodes.QUEUER_ERROR,
           "Invalid response format from queuer service",
           500,
-          JSON.stringify(responseData)
+          JSON.stringify(responseData),
         );
       }
 
       // Check if queuer reported success
       if (!responseData.success) {
         logger.error(
-          `Queuer reported failure: ${responseData.message || "Unknown error"}`
+          `Queuer reported failure: ${responseData.message || "Unknown error"}`,
         );
         throw new AppError(
           ErrorCodes.QUEUER_ERROR,
           responseData.message || "Queuer failed to process mantra",
           500,
-          JSON.stringify(responseData)
+          JSON.stringify(responseData),
         );
       }
 
       logger.info(
-        `Mantra successfully created for user ${req.user?.userId}: queueId=${responseData.queueId}, file=${responseData.finalFilePath}`
+        `Mantra successfully created for user ${req.user?.userId}: queueId=${responseData.queueId}, file=${responseData.finalFilePath}`,
       );
 
       res.status(201).json({
@@ -542,19 +529,19 @@ router.post(
         next(error);
       } else {
         logger.error(
-          `Failed to create mantra for user ${req.user?.userId}: ${error.message}`
+          `Failed to create mantra for user ${req.user?.userId}: ${error.message}`,
         );
         next(
           new AppError(
             ErrorCodes.QUEUER_ERROR,
             "Failed to communicate with queuer service",
             500,
-            error.message
-          )
+            error.message,
+          ),
         );
       }
     }
-  }
+  },
 );
 
 // DELETE /mantras/:id
@@ -569,7 +556,7 @@ router.delete(
         throw new AppError(
           ErrorCodes.VALIDATION_ERROR,
           "Invalid mantra ID",
-          400
+          400,
         );
       }
 
@@ -585,7 +572,7 @@ router.delete(
         throw new AppError(
           ErrorCodes.UNAUTHORIZED_ACCESS,
           "You do not have permission to delete this mantra",
-          403
+          403,
         );
       }
 
@@ -596,7 +583,7 @@ router.delete(
         throw new AppError(
           ErrorCodes.MANTRA_NOT_FOUND,
           "Mantra not found",
-          404
+          404,
         );
       }
 
@@ -604,7 +591,7 @@ router.delete(
       if (mantra.filename) {
         const filePath = path.join(
           process.env.PATH_MP3_OUTPUT || "",
-          mantra.filename as string
+          mantra.filename as string,
         );
 
         if (fs.existsSync(filePath)) {
@@ -612,17 +599,19 @@ router.delete(
             fs.unlinkSync(filePath);
             logger.info(`Deleted mantra file: ${filePath}`);
           } catch (error: any) {
-            logger.error(`Failed to delete mantra file ${filePath}: ${error.message}`);
+            logger.error(
+              `Failed to delete mantra file ${filePath}: ${error.message}`,
+            );
             throw new AppError(
               ErrorCodes.INTERNAL_ERROR,
               "Failed to delete mantra file",
               500,
-              error.message
+              error.message,
             );
           }
         } else {
           logger.warn(
-            `Mantra file not found for deletion: ${filePath}. Proceeding with database deletion.`
+            `Mantra file not found for deletion: ${filePath}. Proceeding with database deletion.`,
           );
         }
       }
@@ -630,9 +619,7 @@ router.delete(
       // Delete mantra from database
       await mantra.destroy();
 
-      logger.info(
-        `Mantra ${mantraId} deleted by user ${req.user?.userId}`
-      );
+      logger.info(`Mantra ${mantraId} deleted by user ${req.user?.userId}`);
 
       res.status(200).json({
         message: "Mantra deleted successfully",
@@ -643,19 +630,19 @@ router.delete(
         next(error);
       } else {
         logger.error(
-          `Failed to delete mantra ${req.params.id}: ${error.message}`
+          `Failed to delete mantra ${req.params.id}: ${error.message}`,
         );
         next(
           new AppError(
             ErrorCodes.INTERNAL_ERROR,
             "Failed to delete mantra",
             500,
-            error.message
-          )
+            error.message,
+          ),
         );
       }
     }
-  }
+  },
 );
 
 export default router;
