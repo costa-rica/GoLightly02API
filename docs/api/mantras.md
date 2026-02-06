@@ -294,17 +294,15 @@ const AudioPlayer = ({ mantraId, authToken }) => {
 
 Retrieves a list of mantras with total listen counts.
 
-- Authentication: Optional (required only if includePrivate=true)
-- Returns all public mantras by default
-- Optionally includes user's private mantras when includePrivate=true (requires authentication)
+- Authentication: Optional
+- Anonymous users receive only public mantras
+- Authenticated users automatically receive public mantras plus their own private mantras
 - Each mantra includes a `listenCount` field with total listen count
-- Works for both authenticated and anonymous users
+- Behavior is determined by authentication state (no query parameters needed)
 
 ### Parameters
 
-Query parameters:
-
-- `includePrivate` (boolean, optional): Set to "true" to include user's private mantras along with public mantras. Requires authentication.
+No parameters required. The response is automatically determined by authentication state.
 
 ### Sample Request
 
@@ -314,21 +312,36 @@ Anonymous access (public mantras only):
 curl --location 'http://localhost:3000/mantras/all'
 ```
 
-Authenticated access without private mantras:
+Authenticated access (public mantras + user's private mantras):
 
 ```bash
 curl --location 'http://localhost:3000/mantras/all' \
 --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
 ```
 
-Authenticated access with private mantras:
+### Sample Response
 
-```bash
-curl --location 'http://localhost:3000/mantras/all?includePrivate=true' \
---header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+Anonymous user response (public mantras only):
+
+```json
+{
+  "mantrasArray": [
+    {
+      "id": 1,
+      "title": "output_20260203_222033",
+      "description": "Morning meditation session",
+      "visibility": "public",
+      "filename": "output_20260203_222033.mp3",
+      "filePath": "/Users/nick/Documents/_project_resources/Mantrify/audio_concatenator_output/20260203/",
+      "listenCount": 42,
+      "createdAt": "2026-02-03T22:20:33.925Z",
+      "updatedAt": "2026-02-03T22:28:55.436Z"
+    }
+  ]
+}
 ```
 
-### Sample Response
+Authenticated user response (public mantras + user's private mantras):
 
 ```json
 {
@@ -361,20 +374,6 @@ curl --location 'http://localhost:3000/mantras/all?includePrivate=true' \
 
 ### Error Responses
 
-#### Authentication required for includePrivate (401)
-
-When `includePrivate=true` is requested without authentication:
-
-```json
-{
-  "error": {
-    "code": "AUTH_FAILED",
-    "message": "Authentication required to include private mantras",
-    "status": 401
-  }
-}
-```
-
 #### Internal server error (500)
 
 ```json
@@ -391,11 +390,10 @@ When `includePrivate=true` is requested without authentication:
 
 - Public mantras are those where `visibility` is not "private"
 - Anonymous users can access the endpoint and will only receive public mantras
-- When `includePrivate=false` or omitted, only public mantras are returned (works for both authenticated and anonymous users)
-- When `includePrivate=true`:
-  - Requires authentication
-  - Returns all public mantras plus the authenticated user's private mantras
-  - Anonymous users will receive a 401 error
+- Authenticated users automatically receive:
+  - All public mantras
+  - Their own private mantras (verified via ContractUsersMantras)
+- No query parameters are needed - authentication state determines the response
 - The `listenCount` field is read directly from the `Mantras` table for each mantra
 - Listen counts are shown for all users (authenticated and anonymous)
 - All fields from the Mantras table are included in the response:

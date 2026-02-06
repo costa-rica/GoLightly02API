@@ -238,23 +238,10 @@ router.get(
   optionalAuthMiddleware,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // Parse includePrivate query parameter
-      const includePrivate = req.query.includePrivate === "true";
-
-      // If includePrivate is requested but user is not authenticated, require auth
-      if (includePrivate && !req.user) {
-        throw new AppError(
-          ErrorCodes.AUTH_FAILED,
-          "Authentication required to include private mantras",
-          401,
-        );
-      }
-
-      // Build query conditions
       let mantras: any[];
 
-      if (includePrivate && req.user) {
-        // Get user's owned mantras via ContractUsersMantras
+      if (req.user) {
+        // Authenticated user - get public mantras + user's private mantras
         const userMantras = await ContractUsersMantras.findAll({
           where: {
             userId: req.user.userId,
@@ -265,13 +252,14 @@ router.get(
           (contract) => contract.get("mantraId") as number,
         );
 
-        // Get all public mantras + user's private mantras
+        // Get all public mantras
         const publicMantras = await Mantra.findAll({
           where: {
             visibility: { [Op.ne]: "private" },
           },
         });
 
+        // Get user's private mantras
         const userPrivateMantras = await Mantra.findAll({
           where: {
             id: { [Op.in]: userMantraIds },
@@ -291,7 +279,7 @@ router.get(
           return true;
         });
       } else {
-        // Get only public mantras (for anonymous users or when includePrivate=false)
+        // Anonymous user - get only public mantras
         mantras = await Mantra.findAll({
           where: {
             visibility: { [Op.ne]: "private" },
@@ -311,7 +299,7 @@ router.get(
       });
 
       logger.info(
-        `Mantras retrieved${req.user ? ` for user ${req.user.userId}` : " anonymously"}: ${mantrasWithListens.length} mantras (includePrivate: ${includePrivate})`,
+        `Mantras retrieved${req.user ? ` for user ${req.user.userId}` : " anonymously"}: ${mantrasWithListens.length} mantras`,
       );
 
       res.status(200).json({
