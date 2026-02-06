@@ -183,20 +183,20 @@ Tasks:
 ### Phase 8: Documentation
 
 Tasks:
-- [ ] Create `docs/api/database.md` with endpoint documentation
-- [ ] Document each endpoint with:
+- [x] Create `docs/api/database.md` with endpoint documentation
+- [x] Document each endpoint with:
   - Description
   - Authentication requirements (admin only)
   - Request format (body/params)
   - Response format
   - Error responses
   - Sample requests (curl examples)
-- [ ] Add notes about:
+- [x] Add notes about:
   - Backup file naming convention
   - CSV format (headers, NULL handling)
   - Path traversal security
   - Transaction handling in replenish
-- [ ] Update main API documentation to reference database endpoints
+- [x] Update main API documentation to reference database endpoints
 
 ### Phase 9: Testing and Validation
 

@@ -9,6 +9,8 @@ Each resource has its own documentation under the [`/api`](./api) folder:
 - [users](./api/users.md)
 - [mantras](./api/mantras.md)
 - [sounds](./api/sounds.md)
+- [admin](./api/admin.md)
+- [database](./api/database.md)
 
 File names should be in lower case and follow the pattern of their router subdomain. This means routers that have two words will have a hyphen between them. If we make a router for the subdomain "contract-users-mantra" the file will be named docs/api/contract-users-mantra.md.
 
