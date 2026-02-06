@@ -33,7 +33,7 @@ Tasks:
 - [x] Create `src/modules/database/validation.ts` file (filename validation, path security)
 - [x] Create `src/modules/database/filesystem.ts` file (directory creation, path management)
 - [x] Create `src/routes/database.ts` file
-- [ ] Install required dependencies (archiver, csv-writer, csv-parser, multer)
+- [x] Install required dependencies (archiver, csv-writer, csv-parser, multer, unzipper)
 - [x] Import database models from mantrify01db
 - [x] Import authMiddleware and create adminMiddleware (or verify admin in routes)
 - [x] Create router and apply authMiddleware to all routes
@@ -58,17 +58,17 @@ All helper functions are organized in `src/modules/database/` following the modu
 
 #### src/modules/database/export.ts
 - [x] `getAllTables()` - Return list of all Sequelize models/tables
-- [ ] `exportTableToCSV(tableName, outputPath)` - Export single table to CSV with headers
-- [ ] `createBackup()` - Orchestrate full backup process (export all tables)
+- [x] `exportTableToCSV(tableName, model, outputPath)` - Export single table to CSV with headers
+- [x] `createBackup(backupDir)` - Orchestrate full backup process (export all tables)
 
 #### src/modules/database/compression.ts
-- [ ] `zipDirectory(sourceDir, outPath)` - Zip directory using archiver
-- [ ] `extractZip(zipPath, extractPath)` - Extract zip file for restore
+- [x] `zipDirectory(sourceDir, outPath)` - Zip directory using archiver
+- [x] `extractZip(zipPath, extractPath)` - Extract zip file for restore using unzipper
 
 #### src/modules/database/import.ts
-- [ ] `importCSVToTable(csvPath, tableName)` - Import single CSV to table
-- [ ] `restoreFromBackup(extractedPath)` - Orchestrate full restore process (import all CSVs)
-- [ ] `parseCSVRow(row, tableName)` - Parse CSV row with NULL handling
+- [x] `importCSVToTable(csvPath, tableName, model)` - Import single CSV to table
+- [x] `restoreFromBackup(extractedPath)` - Orchestrate full restore process (import all CSVs with transaction)
+- [x] `parseCSVRow(row)` - Parse CSV row with NULL handling
 
 ### Phase 3: POST /database/create-backup
 
