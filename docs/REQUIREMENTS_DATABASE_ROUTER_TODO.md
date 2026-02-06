@@ -134,18 +134,18 @@ Tasks:
 ### Phase 6: DELETE /database/delete-backup/:filename
 
 Tasks:
-- [ ] Validate user is authenticated and admin
-- [ ] Extract :filename param from request
-- [ ] Validate filename includes .zip extension
-- [ ] Validate filename against path traversal attacks
-- [ ] Check PATH_PROJECT_RESOURCES env var exists
-- [ ] Construct full path to backup file
-- [ ] Check if file exists; if not, return 404
-- [ ] Verify file is actually a file (not directory)
-- [ ] Delete the file using fs.unlinkSync or fs.promises.unlink
-- [ ] If deletion fails, log error and throw AppError
-- [ ] Return success response with deleted filename
-- [ ] Log deletion event with admin user ID and filename
+- [x] Validate user is authenticated and admin
+- [x] Extract :filename param from request
+- [x] Validate filename includes .zip extension
+- [x] Validate filename against path traversal attacks
+- [x] Check PATH_PROJECT_RESOURCES env var exists
+- [x] Construct full path to backup file
+- [x] Check if file exists; if not, return 404
+- [x] Verify file is actually a file (not directory)
+- [x] Delete the file using fs.unlinkSync or fs.promises.unlink
+- [x] If deletion fails, log error and throw AppError
+- [x] Return success response with deleted filename
+- [x] Log deletion event with admin user ID and filename
 
 ### Phase 7: POST /database/replenish-database
 

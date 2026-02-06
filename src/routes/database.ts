@@ -335,10 +335,60 @@ router.delete(
         `Admin user ${req.user?.userId} requested backup deletion: ${filename}`,
       );
 
-      // Implementation in Phase 6
+      validateZipExtension(filename);
+      validateFilename(filename);
+
+      const projectResourcesPath = process.env.PATH_PROJECT_RESOURCES;
+      if (!projectResourcesPath) {
+        throw new AppError(
+          ErrorCodes.INTERNAL_ERROR,
+          "PATH_PROJECT_RESOURCES is not configured",
+          500,
+        );
+      }
+
+      const sanitizedFilename = sanitizeFilename(filename);
+      const backupPath = getBackupPath();
+      const filePath = path.join(backupPath, sanitizedFilename);
+
+      if (!fs.existsSync(filePath)) {
+        throw new AppError(
+          ErrorCodes.BACKUP_NOT_FOUND,
+          "Backup file not found",
+          404,
+        );
+      }
+
+      const fileStats = fs.statSync(filePath);
+      if (!fileStats.isFile()) {
+        throw new AppError(
+          ErrorCodes.BACKUP_NOT_FOUND,
+          "Backup file not found",
+          404,
+        );
+      }
+
+      try {
+        await fs.promises.unlink(filePath);
+      } catch (error: any) {
+        logger.error(
+          `Failed to delete backup file ${sanitizedFilename}: ${error.message}`,
+        );
+        throw new AppError(
+          ErrorCodes.BACKUP_FAILED,
+          "Failed to delete backup",
+          500,
+          error.message,
+        );
+      }
+
+      logger.info(
+        `Backup deleted by admin ${req.user?.userId}: ${sanitizedFilename}`,
+      );
+
       res.status(200).json({
-        message: "Delete backup endpoint - implementation pending",
-        filename,
+        message: "Backup deleted successfully",
+        filename: sanitizedFilename,
       });
     } catch (error: any) {
       if (error instanceof AppError) {
