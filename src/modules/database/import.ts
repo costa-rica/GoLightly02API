@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import csv from "csv-parser";
 import { sequelize } from "mantrify01db";
+import { Transaction } from "sequelize";
 import { getAllTables } from "./export";
 import logger from "../logger";
 import { AppError, ErrorCodes } from "../errorHandler";
@@ -28,6 +29,7 @@ export async function importCSVToTable(
   csvPath: string,
   tableName: string,
   model: any,
+  transaction?: Transaction,
 ): Promise<number> {
   logger.info(`Importing ${csvPath} to table ${tableName}`);
 
@@ -53,6 +55,7 @@ export async function importCSVToTable(
           await model.bulkCreate(rows, {
             validate: true,
             individualHooks: false,
+            transaction,
           });
 
           logger.info(`Imported ${rows.length} rows into ${tableName}`);
@@ -122,7 +125,7 @@ export async function restoreFromBackup(
       }
 
       // Import the CSV
-      const rowCount = await importCSVToTable(csvPath, name, model);
+      const rowCount = await importCSVToTable(csvPath, name, model, transaction);
       importResults[name] = rowCount;
     }
 

@@ -1,6 +1,8 @@
 import { Router, Request, Response, NextFunction } from "express";
 import fs from "fs";
 import path from "path";
+import multer from "multer";
+import { sequelize } from "mantrify01db";
 import { authMiddleware } from "../modules/authMiddleware";
 import { adminMiddleware } from "../modules/adminMiddleware";
 import { AppError, ErrorCodes } from "../modules/errorHandler";
@@ -12,7 +14,8 @@ import {
   getBackupPath,
 } from "../modules/database/filesystem";
 import { createBackup, getAllTables } from "../modules/database/export";
-import { zipDirectory } from "../modules/database/compression";
+import { zipDirectory, extractZip } from "../modules/database/compression";
+import { importCSVToTable } from "../modules/database/import";
 import {
   validateFilename,
   validateZipExtension,
@@ -20,6 +23,61 @@ import {
 } from "../modules/database/validation";
 
 const router = Router();
+
+const requireProjectResources = (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  if (!process.env.PATH_PROJECT_RESOURCES) {
+    next(
+      new AppError(
+        ErrorCodes.INTERNAL_ERROR,
+        "PATH_PROJECT_RESOURCES is not configured",
+        500,
+      ),
+    );
+    return;
+  }
+
+  next();
+};
+
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => {
+      try {
+        const backupRoot = ensureBackupDirectory();
+        const uploadDir = path.join(backupRoot, "uploads");
+        fs.mkdirSync(uploadDir, { recursive: true });
+        cb(null, uploadDir);
+      } catch (error: any) {
+        cb(error as Error, "");
+      }
+    },
+    filename: (req, file, cb) => {
+      const sanitized = sanitizeFilename(file.originalname);
+      const uniqueSuffix = `${generateTimestamp()}_${Math.random()
+        .toString(36)
+        .slice(2, 8)}`;
+      cb(null, `restore_${uniqueSuffix}_${sanitized}`);
+    },
+  }),
+  fileFilter: (req, file, cb) => {
+    if (!file.originalname.endsWith(".zip")) {
+      cb(
+        new AppError(
+          ErrorCodes.INVALID_BACKUP_FILE,
+          "Only .zip files are allowed",
+          400,
+        ),
+      );
+      return;
+    }
+
+    cb(null, true);
+  },
+});
 
 // Apply authentication and admin middleware to all routes
 router.use(authMiddleware);
@@ -411,15 +469,123 @@ router.delete(
 // POST /database/replenish-database - Restore database from backup
 router.post(
   "/replenish-database",
+  requireProjectResources,
+  upload.single("file"),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       logger.info(
         `Admin user ${req.user?.userId} initiated database restoration`,
       );
 
-      // Implementation in Phase 7
+      if (!req.file) {
+        throw new AppError(
+          ErrorCodes.INVALID_BACKUP_FILE,
+          "No backup file uploaded",
+          400,
+        );
+      }
+
+      validateZipExtension(req.file.originalname);
+
+      const backupRoot = ensureBackupDirectory();
+      const uploadedFilePath = req.file.path;
+      const rowsImported: Record<string, number> = {};
+      let totalRows = 0;
+      let transaction = null;
+      let extractionDir: string | null = null;
+
+      try {
+        extractionDir = await fs.promises.mkdtemp(
+          path.join(backupRoot, "restore_"),
+        );
+
+        await extractZip(uploadedFilePath, extractionDir);
+
+        const topEntries = await fs.promises.readdir(extractionDir);
+        let csvRoot = extractionDir;
+
+        if (topEntries.length === 1) {
+          const possibleRoot = path.join(extractionDir, topEntries[0]);
+          const stats = await fs.promises.stat(possibleRoot);
+          if (stats.isDirectory()) {
+            csvRoot = possibleRoot;
+          }
+        }
+
+        const csvFiles = (await fs.promises.readdir(csvRoot)).filter((entry) =>
+          entry.endsWith(".csv"),
+        );
+
+        if (csvFiles.length === 0) {
+          throw new AppError(
+            ErrorCodes.INVALID_BACKUP_FILE,
+            "No CSV files found in backup",
+            400,
+          );
+        }
+
+        const tables = getAllTables();
+        const tableMap = new Map(tables.map((table) => [table.name, table.model]));
+
+        transaction = await sequelize.transaction();
+
+        for (const csvFile of csvFiles) {
+          const tableName = path.basename(csvFile, ".csv");
+          const model = tableMap.get(tableName);
+
+          if (!model) {
+            throw new AppError(
+              ErrorCodes.RESTORE_FAILED,
+              `Table ${tableName} does not exist in database`,
+              400,
+            );
+          }
+
+          const csvPath = path.join(csvRoot, csvFile);
+          const rowCount = await importCSVToTable(
+            csvPath,
+            tableName,
+            model,
+            transaction,
+          );
+          rowsImported[tableName] = rowCount;
+          totalRows += rowCount;
+        }
+
+        await transaction.commit();
+        transaction = null;
+      } catch (error: any) {
+        if (transaction) {
+          await transaction.rollback();
+        }
+        throw error;
+      } finally {
+        if (extractionDir) {
+          cleanupDirectory(extractionDir);
+        }
+
+        if (fs.existsSync(uploadedFilePath)) {
+          try {
+            await fs.promises.unlink(uploadedFilePath);
+          } catch (cleanupError: any) {
+            logger.warn(
+              `Failed to remove uploaded backup file ${uploadedFilePath}: ${cleanupError.message}`,
+            );
+          }
+        }
+      }
+
+      const tablesImported = Object.keys(rowsImported).length;
+
+      logger.info(
+        `Database restored successfully: ${tablesImported} tables, ${totalRows} total rows`,
+      );
+
       res.status(200).json({
-        message: "Replenish database endpoint - implementation pending",
+        message: "Database restored successfully",
+        tablesImported,
+        rowsImported,
+        totalRows,
       });
     } catch (error: any) {
       if (error instanceof AppError) {

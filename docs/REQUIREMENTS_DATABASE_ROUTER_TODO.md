@@ -150,35 +150,35 @@ Tasks:
 ### Phase 7: POST /database/replenish-database
 
 Tasks:
-- [ ] Validate user is authenticated and admin
-- [ ] Set up multer middleware for file upload (accept .zip only)
-- [ ] Validate uploaded file exists
-- [ ] Validate uploaded file is a .zip file
-- [ ] Create temporary extraction directory with unique name
-- [ ] Extract .zip file to temporary directory
-- [ ] Read all .csv files from extracted directory
-- [ ] For each CSV file:
-  - Parse filename to determine table name (remove .csv extension)
-  - Validate table exists in database
-  - Read CSV with headers
-  - Parse each row and insert into database
-  - Handle NULL values (empty strings -> null)
-  - Log progress (e.g., "Importing X rows into TableName")
-  - If import fails, log which table/row failed
-- [ ] Use transaction for all imports (rollback on failure)
-- [ ] After successful import, cleanup temporary directory
-- [ ] Delete uploaded .zip file
-- [ ] Return success response with:
-  - Number of tables imported
-  - Number of rows imported per table
-  - Total rows imported
-- [ ] Add comprehensive error handling:
-  - Invalid zip file
-  - Missing CSV files
-  - Table doesn't exist
-  - CSV format errors
-  - Database insert errors
-- [ ] Log all steps of restoration process
+- [x] Validate user is authenticated and admin
+- [x] Set up multer middleware for file upload (accept .zip only)
+- [x] Validate uploaded file exists
+- [x] Validate uploaded file is a .zip file
+- [x] Create temporary extraction directory with unique name
+- [x] Extract .zip file to temporary directory
+- [x] Read all .csv files from extracted directory
+- [x] For each CSV file:
+  - [x] Parse filename to determine table name (remove .csv extension)
+  - [x] Validate table exists in database
+  - [x] Read CSV with headers
+  - [x] Parse each row and insert into database
+  - [x] Handle NULL values (empty strings -> null)
+  - [x] Log progress (e.g., "Importing X rows into TableName")
+  - [x] If import fails, log which table/row failed
+- [x] Use transaction for all imports (rollback on failure)
+- [x] After successful import, cleanup temporary directory
+- [x] Delete uploaded .zip file
+- [x] Return success response with:
+  - [x] Number of tables imported
+  - [x] Number of rows imported per table
+  - [x] Total rows imported
+- [x] Add comprehensive error handling:
+  - [x] Invalid zip file
+  - [x] Missing CSV files
+  - [x] Table doesn't exist
+  - [x] CSV format errors
+  - [x] Database insert errors
+- [x] Log all steps of restoration process
 
 ### Phase 8: Documentation
 
