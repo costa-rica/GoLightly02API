@@ -1,8 +1,17 @@
 import { Router, Request, Response, NextFunction } from "express";
+import fs from "fs";
+import path from "path";
 import { authMiddleware } from "../modules/authMiddleware";
 import { adminMiddleware } from "../modules/adminMiddleware";
 import { AppError, ErrorCodes } from "../modules/errorHandler";
 import logger from "../modules/logger";
+import {
+  ensureBackupDirectory,
+  generateTimestamp,
+  cleanupDirectory,
+} from "../modules/database/filesystem";
+import { createBackup, getAllTables } from "../modules/database/export";
+import { zipDirectory } from "../modules/database/compression";
 
 const router = Router();
 
@@ -19,9 +28,96 @@ router.post(
         `Admin user ${req.user?.userId} initiated database backup creation`,
       );
 
-      // Implementation in Phase 3
+      const projectResourcesPath = process.env.PATH_PROJECT_RESOURCES;
+      if (!projectResourcesPath) {
+        throw new AppError(
+          ErrorCodes.BACKUP_FAILED,
+          "PATH_PROJECT_RESOURCES is not configured",
+          500,
+        );
+      }
+
+      const backupRoot = ensureBackupDirectory();
+      const timestamp = generateTimestamp();
+      const backupFolderName = `database_backup_${timestamp}`;
+      const backupFolderPath = path.join(backupRoot, backupFolderName);
+      const zipFilename = `${backupFolderName}.zip`;
+      const zipPath = path.join(backupRoot, zipFilename);
+
+      const cleanupNonZipFiles = () => {
+        if (!fs.existsSync(backupRoot)) {
+          return;
+        }
+
+        const entries = fs.readdirSync(backupRoot);
+        for (const entry of entries) {
+          if (entry.endsWith(".zip")) {
+            continue;
+          }
+
+          const entryPath = path.join(backupRoot, entry);
+          try {
+            const stats = fs.statSync(entryPath);
+            if (stats.isDirectory()) {
+              fs.rmSync(entryPath, { recursive: true, force: true });
+            } else {
+              fs.unlinkSync(entryPath);
+            }
+          } catch (cleanupError: any) {
+            logger.warn(
+              `Failed to cleanup non-zip backup entry ${entryPath}: ${cleanupError.message}`,
+            );
+          }
+        }
+      };
+
+      let tablesExported = 0;
+
+      try {
+        const tables = getAllTables();
+        if (tables.length === 0) {
+          throw new AppError(
+            ErrorCodes.BACKUP_FAILED,
+            "No tables found to export",
+            500,
+          );
+        }
+
+        fs.mkdirSync(backupFolderPath, { recursive: true });
+
+        const backupResult = await createBackup(backupFolderPath);
+        tablesExported = backupResult.tablesExported;
+
+        await zipDirectory(backupFolderPath, zipPath);
+
+        cleanupDirectory(backupFolderPath);
+      } catch (error: any) {
+        cleanupDirectory(backupFolderPath);
+
+        if (fs.existsSync(zipPath)) {
+          try {
+            fs.unlinkSync(zipPath);
+          } catch (cleanupError: any) {
+            logger.warn(
+              `Failed to remove partial zip file ${zipPath}: ${cleanupError.message}`,
+            );
+          }
+        }
+
+        cleanupNonZipFiles();
+        throw error;
+      }
+
+      logger.info(
+        `Database backup created: ${zipFilename} (${tablesExported} tables)`,
+      );
+
       res.status(200).json({
-        message: "Backup endpoint - implementation pending",
+        message: "Database backup created successfully",
+        filename: zipFilename,
+        path: zipPath,
+        tablesExported,
+        timestamp,
       });
     } catch (error: any) {
       if (error instanceof AppError) {

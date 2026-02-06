@@ -73,27 +73,27 @@ All helper functions are organized in `src/modules/database/` following the modu
 ### Phase 3: POST /database/create-backup
 
 Tasks:
-- [ ] Validate user is authenticated and admin
-- [ ] Check PATH_PROJECT_RESOURCES env var exists
-- [ ] Call `ensureBackupDirectory()` to create database_backups/ if needed
-- [ ] Generate timestamp using `generateTimestamp()`
-- [ ] Create backup folder name: `database_backup_${timestamp}`
-- [ ] Create full backup folder path inside database_backups/
-- [ ] Get list of all tables from database
-- [ ] If no tables exist, throw error with AppError
-- [ ] Loop through each table and export to CSV:
-  - Name CSV file as `${tableName}.csv`
-  - Include column headers in CSV
-  - Represent NULL values as empty strings (standard CSV convention)
-  - Log which table is being exported
-  - If export fails, log error with table name and throw
-- [ ] After all CSVs created, zip the backup folder
-- [ ] Name zip file: `database_backup_${timestamp}.zip`
-- [ ] If zipping fails, delete any partial files and throw error
-- [ ] If zipping succeeds, delete original backup folder
-- [ ] Delete any non-.zip files in case of partial failure
-- [ ] Return success response with backup filename and path
-- [ ] Add comprehensive error handling with proper logging
+- [x] Validate user is authenticated and admin
+- [x] Check PATH_PROJECT_RESOURCES env var exists
+- [x] Call `ensureBackupDirectory()` to create database_backups/ if needed
+- [x] Generate timestamp using `generateTimestamp()`
+- [x] Create backup folder name: `database_backup_${timestamp}`
+- [x] Create full backup folder path inside database_backups/
+- [x] Get list of all tables from database
+- [x] If no tables exist, throw error with AppError
+- [x] Loop through each table and export to CSV:
+  - [x] Name CSV file as `${tableName}.csv`
+  - [x] Include column headers in CSV
+  - [x] Represent NULL values as empty strings (standard CSV convention)
+  - [x] Log which table is being exported
+  - [x] If export fails, log error with table name and throw
+- [x] After all CSVs created, zip the backup folder
+- [x] Name zip file: `database_backup_${timestamp}.zip`
+- [x] If zipping fails, delete any partial files and throw error
+- [x] If zipping succeeds, delete original backup folder
+- [x] Delete any non-.zip files in case of partial failure
+- [x] Return success response with backup filename and path
+- [x] Add comprehensive error handling with proper logging
 
 ### Phase 4: GET /database/backups-list
 
