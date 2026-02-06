@@ -260,7 +260,7 @@ router.get(
           include: [
             {
               model: ContractUsersMantras,
-              as: "ContractUsersMantras",
+              as: "contractUsersMantras",
               required: false,
               attributes: ["userId"],
             },
@@ -276,7 +276,7 @@ router.get(
           include: [
             {
               model: ContractUsersMantras,
-              as: "ContractUsersMantras",
+              as: "contractUsersMantras",
               required: false,
               attributes: ["userId"],
             },
@@ -303,7 +303,7 @@ router.get(
           include: [
             {
               model: ContractUsersMantras,
-              as: "ContractUsersMantras",
+              as: "contractUsersMantras",
               required: false,
               attributes: ["userId"],
             },
@@ -314,20 +314,20 @@ router.get(
       const mantrasWithListens = mantras.map((mantra) => {
         const plainMantra = mantra.get({ plain: true }) as {
           listenCount?: number | null;
-          ContractUsersMantras?: Array<{ userId: number }>;
+          contractUsersMantras?: Array<{ userId: number }>;
         };
 
-        // Extract ownerUserId from ContractUsersMantras relationship
+        // Extract ownerUserId from contractUsersMantras relationship
         let ownerUserId: number | string = "missing";
         if (
-          plainMantra.ContractUsersMantras &&
-          plainMantra.ContractUsersMantras.length > 0
+          plainMantra.contractUsersMantras &&
+          plainMantra.contractUsersMantras.length > 0
         ) {
-          ownerUserId = plainMantra.ContractUsersMantras[0].userId;
+          ownerUserId = plainMantra.contractUsersMantras[0].userId;
         }
 
-        // Remove the ContractUsersMantras array from response
-        const { ContractUsersMantras: _, ...mantraWithoutContract } =
+        // Remove the contractUsersMantras array from response
+        const { contractUsersMantras: _, ...mantraWithoutContract } =
           plainMantra;
 
         return {
