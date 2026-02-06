@@ -252,19 +252,35 @@ router.get(
           (contract) => contract.get("mantraId") as number,
         );
 
-        // Get all public mantras
+        // Get all public mantras with ownership info
         const publicMantras = await Mantra.findAll({
           where: {
             visibility: { [Op.ne]: "private" },
           },
+          include: [
+            {
+              model: ContractUsersMantras,
+              as: "ContractUsersMantras",
+              required: false,
+              attributes: ["userId"],
+            },
+          ],
         });
 
-        // Get user's private mantras
+        // Get user's private mantras with ownership info
         const userPrivateMantras = await Mantra.findAll({
           where: {
             id: { [Op.in]: userMantraIds },
             visibility: "private",
           },
+          include: [
+            {
+              model: ContractUsersMantras,
+              as: "ContractUsersMantras",
+              required: false,
+              attributes: ["userId"],
+            },
+          ],
         });
 
         // Combine and deduplicate
@@ -279,22 +295,45 @@ router.get(
           return true;
         });
       } else {
-        // Anonymous user - get only public mantras
+        // Anonymous user - get only public mantras with ownership info
         mantras = await Mantra.findAll({
           where: {
             visibility: { [Op.ne]: "private" },
           },
+          include: [
+            {
+              model: ContractUsersMantras,
+              as: "ContractUsersMantras",
+              required: false,
+              attributes: ["userId"],
+            },
+          ],
         });
       }
 
       const mantrasWithListens = mantras.map((mantra) => {
         const plainMantra = mantra.get({ plain: true }) as {
           listenCount?: number | null;
+          ContractUsersMantras?: Array<{ userId: number }>;
         };
 
+        // Extract ownerUserId from ContractUsersMantras relationship
+        let ownerUserId: number | string = "missing";
+        if (
+          plainMantra.ContractUsersMantras &&
+          plainMantra.ContractUsersMantras.length > 0
+        ) {
+          ownerUserId = plainMantra.ContractUsersMantras[0].userId;
+        }
+
+        // Remove the ContractUsersMantras array from response
+        const { ContractUsersMantras: _, ...mantraWithoutContract } =
+          plainMantra;
+
         return {
-          ...plainMantra,
+          ...mantraWithoutContract,
           listenCount: plainMantra.listenCount ?? 0,
+          ownerUserId,
         };
       });
 
