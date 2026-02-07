@@ -8,6 +8,7 @@ All endpoints require authentication AND admin status (isAdmin=true) to access.
 
 Admin endpoints provide elevated access to:
 - View all users in the system
+- Delete any user by ID (with optional benevolent user conversion)
 - View all mantras regardless of visibility
 - Delete any mantra regardless of ownership
 - View all queue records from the processing queue
@@ -148,6 +149,60 @@ When the authenticated user is not an admin (isAdmin=false):
 - Timestamps (createdAt, updatedAt) are automatically managed by Sequelize
 - The emailVerifiedAt field will be null for users who haven't verified their email
 - The hasPublicMantras field indicates whether the user has any mantras with visibility set to "public"
+
+## DELETE /admin/users/:userId
+
+Deletes any user by ID. Admin can delete any user including other admins.
+
+- Authentication: Required
+- Admin Status: Required (isAdmin=true)
+- Supports optional benevolent user conversion to preserve public mantras
+- Full documentation available in [deleteUser.md](deleteUser.md)
+
+### Parameters
+
+URL parameters:
+- `userId` (number, required): The user ID to delete
+
+Request body:
+```json
+{
+  "savePublicMantrasAsBenevolentUser": false  // optional, boolean, default: false
+}
+```
+
+### Sample Request
+
+```bash
+curl --location --request DELETE 'http://localhost:3000/admin/users/5' \
+--header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+  "savePublicMantrasAsBenevolentUser": false
+}'
+```
+
+### Sample Response
+
+Success (200):
+```json
+{
+  "message": "User deleted successfully",
+  "userId": 5,
+  "mantrasDeleted": 8,
+  "elevenLabsFilesDeleted": 24,
+  "benevolentUserCreated": false
+}
+```
+
+### Notes
+
+- See [deleteUser.md](deleteUser.md) for complete documentation including:
+  - What gets deleted
+  - Benevolent user conversion details
+  - Error responses
+  - Edge cases
+  - Implementation details
 
 ## GET /admin/mantras
 
