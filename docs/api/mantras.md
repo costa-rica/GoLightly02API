@@ -294,12 +294,12 @@ const AudioPlayer = ({ mantraId, authToken }) => {
 
 ## GET /mantras/all
 
-Retrieves a list of mantras with total listen counts.
+Retrieves a list of mantras with total listen counts and favorite counts.
 
 - Authentication: Optional
 - Anonymous users receive only public mantras
 - Authenticated users automatically receive public mantras plus their own private mantras
-- Each mantra includes a `listenCount` field with total listen count
+- Each mantra includes a `listenCount` field with total listen count and a `favoriteCount` field showing how many users have favorited it
 - Behavior is determined by authentication state (no query parameters needed)
 
 ### Parameters
@@ -336,6 +336,7 @@ Anonymous user response (public mantras only):
       "filename": "output_20260203_222033.mp3",
       "filePath": "/Users/nick/Documents/_project_resources/Mantrify/audio_concatenator_output/20260203/",
       "listenCount": 42,
+      "favoriteCount": 8,
       "ownerUserId": 5,
       "createdAt": "2026-02-03T22:20:33.925Z",
       "updatedAt": "2026-02-03T22:28:55.436Z"
@@ -357,6 +358,7 @@ Authenticated user response (public mantras + user's private mantras):
       "filename": "output_20260203_222033.mp3",
       "filePath": "/Users/nick/Documents/_project_resources/Mantrify/audio_concatenator_output/20260203/",
       "listenCount": 42,
+      "favoriteCount": 8,
       "ownerUserId": 5,
       "createdAt": "2026-02-03T22:20:33.925Z",
       "updatedAt": "2026-02-03T22:28:55.436Z"
@@ -369,6 +371,7 @@ Authenticated user response (public mantras + user's private mantras):
       "filename": "output_20260204_103015.mp3",
       "filePath": "/Users/nick/Documents/_project_resources/Mantrify/audio_concatenator_output/20260204/",
       "listenCount": 5,
+      "favoriteCount": 2,
       "ownerUserId": 3,
       "createdAt": "2026-02-04T10:30:15.125Z",
       "updatedAt": "2026-02-04T10:35:22.789Z"
@@ -400,7 +403,8 @@ Authenticated user response (public mantras + user's private mantras):
   - Their own private mantras (verified via ContractUsersMantras)
 - No query parameters are needed - authentication state determines the response
 - The `listenCount` field is read directly from the `Mantras` table for each mantra
-- Listen counts are shown for all users (authenticated and anonymous)
+- The `favoriteCount` field is calculated by counting records in `ContractUserMantraListen` table where `favorite` is true for that mantra
+- Listen counts and favorite counts are shown for all users (authenticated and anonymous)
 - All fields from the Mantras table are included in the response:
   - `id`: Unique identifier for the mantra
   - `title`: Name/title of the mantra
@@ -408,12 +412,14 @@ Authenticated user response (public mantras + user's private mantras):
   - `visibility`: "public" or "private"
   - `filename`: Name of the MP3 file
   - `filePath`: Full directory path to the mantra file
-  - `listenCount`: Total listen count
+  - `listenCount`: Total listen count across all users
+  - `favoriteCount`: Total number of users who have favorited this mantra
   - `ownerUserId`: User ID of the mantra owner (from ContractUsersMantras table), or "missing" if no owner exists
   - `createdAt`: Timestamp when mantra was created
   - `updatedAt`: Timestamp when mantra was last updated
 - Uses optional authentication middleware, allowing both authenticated and anonymous access
 - Ownership information is fetched efficiently using a Sequelize LEFT JOIN
+- Favorite counts are fetched efficiently with a single grouped COUNT query
 
 ## POST /mantras/favorite/:mantraId/:trueOrFalse
 

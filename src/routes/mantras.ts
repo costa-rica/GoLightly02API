@@ -3,6 +3,7 @@ import {
   Mantra,
   ContractUsersMantras,
   ContractUserMantraListen,
+  sequelize,
 } from "mantrify01db";
 import { Op } from "sequelize";
 import { authMiddleware } from "../modules/authMiddleware";
@@ -311,8 +312,31 @@ router.get(
         });
       }
 
+      // Get favorite counts for all mantras
+      const mantraIds = mantras.map((mantra) => mantra.get("id") as number);
+
+      const favoriteCounts = await ContractUserMantraListen.findAll({
+        where: {
+          mantraId: { [Op.in]: mantraIds },
+          favorite: true,
+        },
+        attributes: [
+          "mantraId",
+          [sequelize.fn("COUNT", sequelize.col("id")), "favoriteCount"],
+        ],
+        group: ["mantraId"],
+        raw: true,
+      });
+
+      // Create a map of mantraId to favoriteCount for quick lookup
+      const favoriteCountMap = new Map<number, number>();
+      favoriteCounts.forEach((record: any) => {
+        favoriteCountMap.set(record.mantraId, parseInt(record.favoriteCount, 10));
+      });
+
       const mantrasWithListens = mantras.map((mantra) => {
         const plainMantra = mantra.get({ plain: true }) as {
+          id: number;
           listenCount?: number | null;
           contractUsersMantras?: Array<{ userId: number }>;
         };
@@ -333,6 +357,7 @@ router.get(
         return {
           ...mantraWithoutContract,
           listenCount: plainMantra.listenCount ?? 0,
+          favoriteCount: favoriteCountMap.get(plainMantra.id) ?? 0,
           ownerUserId,
         };
       });
