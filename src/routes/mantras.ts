@@ -578,6 +578,138 @@ router.post(
   },
 );
 
+// PATCH /mantras/update/:id
+router.patch(
+  "/update/:id",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const mantraId = parseInt(req.params.id, 10);
+      const { title, description, visibility } = req.body;
+
+      // Validate ID
+      if (isNaN(mantraId)) {
+        throw new AppError(
+          ErrorCodes.VALIDATION_ERROR,
+          "Invalid mantra ID",
+          400,
+        );
+      }
+
+      // Check if at least one field is provided
+      if (
+        title === undefined &&
+        description === undefined &&
+        visibility === undefined
+      ) {
+        throw new AppError(
+          ErrorCodes.VALIDATION_ERROR,
+          "At least one field (title, description, or visibility) must be provided",
+          400,
+        );
+      }
+
+      // Validate visibility if provided
+      if (visibility !== undefined && visibility !== null) {
+        if (visibility !== "public" && visibility !== "private") {
+          throw new AppError(
+            ErrorCodes.VALIDATION_ERROR,
+            "Visibility must be either 'public' or 'private'",
+            400,
+          );
+        }
+      }
+
+      // Validate title if provided (not empty)
+      if (title !== undefined && title !== null) {
+        if (typeof title !== "string" || title.trim() === "") {
+          throw new AppError(
+            ErrorCodes.VALIDATION_ERROR,
+            "Title must be a non-empty string",
+            400,
+          );
+        }
+      }
+
+      // Verify ownership via ContractUsersMantras
+      const ownership = await ContractUsersMantras.findOne({
+        where: {
+          userId: req.user?.userId,
+          mantraId: mantraId,
+        },
+      });
+
+      if (!ownership) {
+        throw new AppError(
+          ErrorCodes.UNAUTHORIZED_ACCESS,
+          "You do not have permission to update this mantra",
+          403,
+        );
+      }
+
+      // Find mantra in database
+      const mantra = await Mantra.findByPk(mantraId);
+
+      if (!mantra) {
+        throw new AppError(
+          ErrorCodes.MANTRA_NOT_FOUND,
+          "Mantra not found",
+          404,
+        );
+      }
+
+      // Build update object (only include non-null provided fields)
+      const updateData: {
+        title?: string;
+        description?: string;
+        visibility?: string;
+      } = {};
+
+      if (title !== undefined && title !== null) {
+        updateData.title = title.trim();
+      }
+
+      if (description !== undefined && description !== null) {
+        updateData.description = description;
+      }
+
+      if (visibility !== undefined && visibility !== null) {
+        updateData.visibility = visibility;
+      }
+
+      // Update mantra
+      await mantra.update(updateData);
+
+      // Reload to get updated values
+      await mantra.reload();
+
+      logger.info(
+        `Mantra ${mantraId} updated by user ${req.user?.userId}: ${JSON.stringify(updateData)}`,
+      );
+
+      res.status(200).json({
+        message: "Mantra updated successfully",
+        mantra: mantra.get({ plain: true }),
+      });
+    } catch (error: any) {
+      if (error instanceof AppError) {
+        next(error);
+      } else {
+        logger.error(
+          `Failed to update mantra ${req.params.id}: ${error.message}`,
+        );
+        next(
+          new AppError(
+            ErrorCodes.INTERNAL_ERROR,
+            "Failed to update mantra",
+            500,
+            error.message,
+          ),
+        );
+      }
+    }
+  },
+);
+
 // DELETE /mantras/:id
 router.delete(
   "/:id",

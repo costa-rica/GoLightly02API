@@ -529,6 +529,194 @@ Success (200):
 - Favoriting works for both public and private mantras (as long as they exist in the database)
 - This endpoint does not verify ownership, allowing users to favorite any mantra
 
+## PATCH /mantras/update/:id
+
+Updates metadata for an existing mantra.
+
+- Authentication: Required
+- User must own the mantra (verified via ContractUsersMantras)
+- Supports partial updates (any combination of title, description, and/or visibility)
+- Returns the complete updated mantra object
+
+### Parameters
+
+URL parameters:
+
+- `id` (number, required): The mantra ID to update
+
+Request body (at least one field required):
+
+- `title` (string, optional): New title for the mantra (must be non-empty if provided)
+- `description` (string, optional): New description for the mantra (can be null)
+- `visibility` (string, optional): Must be exactly "public" or "private" (lowercase)
+
+### Sample Request
+
+Update only the title:
+
+```bash
+curl --location --request PATCH 'http://localhost:3000/mantras/update/5' \
+--header 'Content-Type: application/json' \
+--header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' \
+--data '{
+  "title": "Morning Meditation"
+}'
+```
+
+Update multiple fields:
+
+```bash
+curl --location --request PATCH 'http://localhost:3000/mantras/update/5' \
+--header 'Content-Type: application/json' \
+--header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' \
+--data '{
+  "title": "Evening Relaxation",
+  "description": "A calming meditation for evening wind-down",
+  "visibility": "public"
+}'
+```
+
+Update only visibility:
+
+```bash
+curl --location --request PATCH 'http://localhost:3000/mantras/update/5' \
+--header 'Content-Type: application/json' \
+--header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' \
+--data '{
+  "visibility": "private"
+}'
+```
+
+### Sample Response
+
+Success (200):
+
+```json
+{
+  "message": "Mantra updated successfully",
+  "mantra": {
+    "id": 5,
+    "title": "Evening Relaxation",
+    "description": "A calming meditation for evening wind-down",
+    "visibility": "public",
+    "filename": "output_20260203_222033.mp3",
+    "filePath": "/Users/nick/Documents/_project_resources/Mantrify/audio_concatenator_output/20260203/",
+    "listenCount": 42,
+    "createdAt": "2026-02-03T22:20:33.925Z",
+    "updatedAt": "2026-02-06T14:32:18.456Z"
+  }
+}
+```
+
+### Error Responses
+
+#### Invalid mantra ID (400)
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid mantra ID",
+    "status": 400
+  }
+}
+```
+
+#### No fields provided (400)
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "At least one field (title, description, or visibility) must be provided",
+    "status": 400
+  }
+}
+```
+
+#### Invalid visibility value (400)
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Visibility must be either 'public' or 'private'",
+    "status": 400
+  }
+}
+```
+
+#### Invalid title (400)
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Title must be a non-empty string",
+    "status": 400
+  }
+}
+```
+
+#### Missing or invalid token (401)
+
+```json
+{
+  "error": {
+    "code": "INVALID_TOKEN",
+    "message": "Invalid or expired token",
+    "status": 401
+  }
+}
+```
+
+#### Unauthorized access (403)
+
+```json
+{
+  "error": {
+    "code": "UNAUTHORIZED_ACCESS",
+    "message": "You do not have permission to update this mantra",
+    "status": 403
+  }
+}
+```
+
+#### Mantra not found (404)
+
+```json
+{
+  "error": {
+    "code": "MANTRA_NOT_FOUND",
+    "message": "Mantra not found",
+    "status": 404
+  }
+}
+```
+
+#### Internal server error (500)
+
+```json
+{
+  "error": {
+    "code": "INTERNAL_ERROR",
+    "message": "Failed to update mantra",
+    "status": 500
+  }
+}
+```
+
+### Notes
+
+- At least one field (title, description, or visibility) must be provided in the request body
+- Fields set to `null` are ignored and will not update the database value
+- Only fields that are provided and not null will be updated
+- Title is trimmed of whitespace if provided
+- Visibility must be exactly "public" or "private" (lowercase) - case-sensitive validation
+- User must own the mantra via ContractUsersMantras table to update it
+- The endpoint returns the complete mantra object after update, including all fields
+- The `updatedAt` timestamp is automatically updated by Sequelize
+
 ## DELETE /mantras/:id
 
 Deletes a mantra and its associated MP3 file.
