@@ -110,15 +110,15 @@ Implement a modular user deletion process that handles file cleanup, database re
 ## PHASE 4: Admin Endpoint
 **Implement DELETE /admin/users/:userId**
 
-- [ ] Open `/src/routes/admin.ts`
-- [ ] Import deleteUser module: `import { deleteUser } from "../modules/deleteUser"`
-- [ ] Create DELETE `/users/:userId` endpoint
-- [ ] Extract userId from `req.params.userId` and parse to number
-- [ ] Validate userId is a valid number
-- [ ] Extract `savePublicMantrasAsBenevolentUser` from request body (default: false)
-- [ ] Add log: "Admin user {adminId} initiated deletion of user {userId}"
-- [ ] Call `await deleteUser(userId, savePublicMantrasAsBenevolentUser)`
-- [ ] Return success response (200):
+- [x] Open `/src/routes/admin.ts`
+- [x] Import deleteUser module: `import { deleteUser } from "../modules/deleteUser"`
+- [x] Create DELETE `/users/:userId` endpoint
+- [x] Extract userId from `req.params.userId` and parse to number
+- [x] Validate userId is a valid number
+- [x] Extract `savePublicMantrasAsBenevolentUser` from request body (default: false)
+- [x] Add log: "Admin user {adminId} initiated deletion of user {userId}"
+- [x] Call `await deleteUser(userId, savePublicMantrasAsBenevolentUser)`
+- [x] Return success response (200):
   ```json
   {
     "message": "User deleted successfully",
@@ -128,13 +128,13 @@ Implement a modular user deletion process that handles file cleanup, database re
     "benevolentUserCreated": boolean
   }
   ```
-- [ ] Handle errors appropriately:
-  - [ ] 400: Invalid userId
-  - [ ] 404: User not found
-  - [ ] 500: Internal server error
-- [ ] Add error logging
+- [x] Handle errors appropriately:
+  - [x] 400: Invalid userId
+  - [x] 404: User not found (handled by deleteUser module)
+  - [x] 500: Internal server error
+- [x] Add error logging
 
-**Commit after completing Phase 4**
+**Commit after completing Phase 4** ✅
 
 ---
 

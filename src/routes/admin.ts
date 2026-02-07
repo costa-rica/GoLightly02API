@@ -9,6 +9,7 @@ import { authMiddleware } from "../modules/authMiddleware";
 import { AppError, ErrorCodes } from "../modules/errorHandler";
 import logger from "../modules/logger";
 import { checkUserHasPublicMantras } from "../modules/userPublicMantras";
+import { deleteUser } from "../modules/deleteUser";
 import fs from "fs";
 import path from "path";
 
@@ -313,6 +314,58 @@ router.get(
           error.message
         )
       );
+    }
+  }
+);
+
+// DELETE /admin/users/:userId
+router.delete(
+  "/users/:userId",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = parseInt(req.params.userId, 10);
+
+      // Validate userId is a valid number
+      if (isNaN(userId)) {
+        throw new AppError(
+          ErrorCodes.VALIDATION_ERROR,
+          "Invalid user ID",
+          400
+        );
+      }
+
+      // Extract savePublicMantrasAsBenevolentUser from request body (default: false)
+      const savePublicMantrasAsBenevolentUser =
+        req.body.savePublicMantrasAsBenevolentUser === true;
+
+      logger.info(
+        `Admin user ${req.user?.userId} initiated deletion of user ${userId}`
+      );
+
+      // Call deleteUser module
+      const result = await deleteUser(userId, savePublicMantrasAsBenevolentUser);
+
+      res.status(200).json({
+        message: "User deleted successfully",
+        userId: result.userId,
+        mantrasDeleted: result.mantrasDeleted,
+        elevenLabsFilesDeleted: result.elevenLabsFilesDeleted,
+        benevolentUserCreated: result.benevolentUserCreated,
+      });
+    } catch (error: any) {
+      if (error instanceof AppError) {
+        next(error);
+      } else {
+        logger.error(`Failed to delete user ${req.params.userId}: ${error.message}`);
+        next(
+          new AppError(
+            ErrorCodes.INTERNAL_ERROR,
+            "Failed to delete user",
+            500,
+            error.message
+          )
+        );
+      }
     }
   }
 );
