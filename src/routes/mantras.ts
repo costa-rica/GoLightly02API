@@ -472,6 +472,13 @@ router.post(
         );
       }
 
+      // Log complete request in development mode
+      if (process.env.NODE_ENV === "development") {
+        logger.info(
+          `[DEV] POST /mantras/create request body: ${JSON.stringify(req.body, null, 2)}`,
+        );
+      }
+
       // Get queuer URL from environment
       const queuerUrl = process.env.URL_MANTRIFY01QUEUER;
       if (!queuerUrl) {
