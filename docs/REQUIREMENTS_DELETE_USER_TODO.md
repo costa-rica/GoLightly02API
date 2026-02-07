@@ -22,88 +22,88 @@ Implement a modular user deletion process that handles file cleanup, database re
 ## PHASE 1: Core Delete User Module
 **Create the reusable deleteUser module with data collection logic**
 
-- [ ] Create `/src/modules/deleteUser.ts` file
-- [ ] Add TypeScript interface for function return type
-- [ ] Implement main `deleteUser()` function signature:
+- [x] Create `/src/modules/deleteUser.ts` file
+- [x] Add TypeScript interface for function return type
+- [x] Implement main `deleteUser()` function signature:
   ```typescript
   export async function deleteUser(
     userId: number,
     savePublicMantrasAsBenevolentUser: boolean = false
   ): Promise<DeleteUserResult>
   ```
-- [ ] Add user validation: query User table and verify user exists
-- [ ] Add log: "Initiating user deletion for user ID: {userId}"
-- [ ] Query `ContractUsersMantras` to get all mantraIds for the user
-- [ ] Implement logic to filter mantras based on `savePublicMantrasAsBenevolentUser`:
-  - [ ] If true: query Mantras table and filter to only private mantras
-  - [ ] If false: include all user's mantras
-  - [ ] Store in `userDeleteMantraIdsArray`
-- [ ] Add log: "Found {count} mantra(s) to delete for user {userId}"
-- [ ] Query `ContractMantrasElevenLabsFiles` to get elevenLabsFileIds for mantras
-- [ ] Store unique ElevenLabs file IDs in `elevenLabsFileIdsArray`
-- [ ] Add log: "Found {count} ElevenLabs files associated with mantras to delete"
-- [ ] Query `ElevenLabsFiles` table to get file paths
-- [ ] Create array of full paths: `{ id, fullPath: path.join(filePath, filename) }`
-- [ ] Add log: "Retrieved file paths for {count} ElevenLabs files"
+- [x] Add user validation: query User table and verify user exists
+- [x] Add log: "Initiating user deletion for user ID: {userId}"
+- [x] Query `ContractUsersMantras` to get all mantraIds for the user
+- [x] Implement logic to filter mantras based on `savePublicMantrasAsBenevolentUser`:
+  - [x] If true: query Mantras table and filter to only private mantras
+  - [x] If false: include all user's mantras
+  - [x] Store in `userDeleteMantraIdsArray`
+- [x] Add log: "Found {count} mantra(s) to delete for user {userId}"
+- [x] Query `ContractMantrasElevenLabsFiles` to get elevenLabsFileIds for mantras
+- [x] Store unique ElevenLabs file IDs in `elevenLabsFileIdsArray`
+- [x] Add log: "Found {count} ElevenLabs files associated with mantras to delete"
+- [x] Query `ElevenLabsFiles` table to get file paths
+- [x] Create array of full paths: `{ id, fullPath: path.join(filePath, filename) }`
+- [x] Add log: "Retrieved file paths for {count} ElevenLabs files"
 
-**Commit after completing Phase 1**
+**Commit after completing Phase 1** ✅
 
 ---
 
 ## PHASE 2: Filesystem Cleanup
 **Delete physical files from the filesystem**
 
-- [ ] Implement ElevenLabs file deletion loop:
-  - [ ] For each file path, check if file exists with `fs.existsSync()`
-  - [ ] If exists, delete with `fs.unlinkSync()`
-  - [ ] Add success log: "Deleted ElevenLabs file: {fullPath}"
-  - [ ] If not exists, add warning log: "ElevenLabs file not found, skipping: {fullPath}"
-  - [ ] Catch and log errors but continue processing
-  - [ ] Track success count
-- [ ] Add summary log: "Deleted {successCount} of {totalCount} ElevenLabs files"
-- [ ] Query Mantras table where `id IN userDeleteMantraIdsArray` to get file paths
-- [ ] Implement mantra MP3 file deletion loop:
-  - [ ] For each mantra, determine full path (filePath or PATH_MP3_OUTPUT fallback)
-  - [ ] Check if file exists with `fs.existsSync()`
-  - [ ] If exists, delete with `fs.unlinkSync()`
-  - [ ] Add success log: "Deleted mantra file: {fullPath}"
-  - [ ] If not exists, add warning log: "Mantra file not found, skipping: {fullPath}"
-  - [ ] Catch and log errors but continue processing
-  - [ ] Track success count
-- [ ] Add summary log: "Deleted {successCount} of {totalCount} mantra MP3 files"
+- [x] Implement ElevenLabs file deletion loop:
+  - [x] For each file path, check if file exists with `fs.existsSync()`
+  - [x] If exists, delete with `fs.unlinkSync()`
+  - [x] Add success log: "Deleted ElevenLabs file: {fullPath}"
+  - [x] If not exists, add warning log: "ElevenLabs file not found, skipping: {fullPath}"
+  - [x] Catch and log errors but continue processing
+  - [x] Track success count
+- [x] Add summary log: "Deleted {successCount} of {totalCount} ElevenLabs files"
+- [x] Query Mantras table where `id IN userDeleteMantraIdsArray` to get file paths
+- [x] Implement mantra MP3 file deletion loop:
+  - [x] For each mantra, determine full path (filePath or PATH_MP3_OUTPUT fallback)
+  - [x] Check if file exists with `fs.existsSync()`
+  - [x] If exists, delete with `fs.unlinkSync()`
+  - [x] Add success log: "Deleted mantra file: {fullPath}"
+  - [x] If not exists, add warning log: "Mantra file not found, skipping: {fullPath}"
+  - [x] Catch and log errors but continue processing
+  - [x] Track success count
+- [x] Add summary log: "Deleted {successCount} of {totalCount} mantra MP3 files"
 
-**Commit after completing Phase 2**
+**Commit after completing Phase 2** ✅
 
 ---
 
 ## PHASE 3: Database Cleanup
 **Delete database records in proper order using transaction**
 
-- [ ] Start database transaction using `sequelize.transaction()`
-- [ ] Wrap database operations in try/catch
-- [ ] Delete ElevenLabsFiles records where `id IN elevenLabsFileIdsArray`
-- [ ] Add log: "Deleted {count} ElevenLabs file records from database"
-- [ ] Delete Mantras records where `id IN userDeleteMantraIdsArray`
-  - [ ] This cascades to: ContractUsersMantras, ContractMantrasElevenLabsFiles, ContractMantrasSoundFiles
-- [ ] Add log: "Deleted {count} mantra records from database (cascade deletes contract tables)"
-- [ ] Delete all ContractUserMantraListen records where `userId = {userId}`
-- [ ] Add log: "Deleted {count} listen records for user {userId}"
-- [ ] Delete Queue records where `userId = {userId}`
-- [ ] Add log: "Deleted {count} queue records for user {userId}"
-- [ ] Implement user record handling:
-  - [ ] If `savePublicMantrasAsBenevolentUser === true`:
-    - [ ] Update User: set email to `BenevolentUser{userId}@go-lightly.love`
-    - [ ] Update User: set isAdmin to false
-    - [ ] Add log: "User {userId} converted to benevolent user: BenevolentUser{userId}@go-lightly.love"
-  - [ ] If `savePublicMantrasAsBenevolentUser === false`:
-    - [ ] Delete User record where id = userId
-    - [ ] Add log: "Deleted user record for user {userId}"
-- [ ] Commit transaction on success
-- [ ] Rollback transaction on error and re-throw
-- [ ] Add final log: "User deletion completed successfully for user ID: {userId}"
-- [ ] Return result object with userId, mantrasDeleted, elevenLabsFilesDeleted, benevolentUserCreated
+- [x] Start database transaction using `sequelize.transaction()`
+- [x] Wrap database operations in try/catch
+- [x] Delete ElevenLabsFiles records where `id IN elevenLabsFileIdsArray`
+- [x] Add log: "Deleted {count} ElevenLabs file records from database"
+- [x] Delete Mantras records where `id IN userDeleteMantraIdsArray`
+  - [x] This cascades to: ContractUsersMantras, ContractMantrasElevenLabsFiles, ContractMantrasSoundFiles
+- [x] Add log: "Deleted {count} mantra records from database (cascade deletes contract tables)"
+- [x] Delete all ContractUserMantraListen records where `userId = {userId}`
+- [x] Add log: "Deleted {count} listen records for user {userId}"
+- [x] Delete Queue records where `userId = {userId}`
+- [x] Add log: "Deleted {count} queue records for user {userId}"
+- [x] Implement user record handling:
+  - [x] If `savePublicMantrasAsBenevolentUser === true`:
+    - [x] Update User: set email to `BenevolentUser{userId}@go-lightly.love`
+    - [x] Update User: set isAdmin to false
+    - [x] Add log: "User {userId} converted to benevolent user: BenevolentUser{userId}@go-lightly.love"
+  - [x] If `savePublicMantrasAsBenevolentUser === false`:
+    - [x] Delete User record where id = userId
+    - [x] Add log: "Deleted user record for user {userId}"
+- [x] Commit transaction on success
+- [x] Rollback transaction on error and re-throw
+- [x] Add final log: "User deletion completed successfully for user ID: {userId}"
+- [x] Return result object with userId, mantrasDeleted, elevenLabsFilesDeleted, benevolentUserCreated
 
-**Commit after completing Phase 3**
+**Commit after completing Phase 3** ✅
 
 ---
 
