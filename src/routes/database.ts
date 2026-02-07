@@ -560,6 +560,19 @@ router.post(
 
         transaction = await sequelize.transaction();
 
+        // Clear all existing data before restore (in reverse order to handle foreign keys)
+        logger.info("Clearing existing database data before restore");
+        for (let i = tables.length - 1; i >= 0; i--) {
+          const { name, model } = tables[i];
+          await model.destroy({
+            where: {},
+            truncate: true,
+            cascade: true,
+            transaction,
+          });
+          logger.info(`Cleared table: ${name}`);
+        }
+
         for (const csvFile of csvFiles) {
           const tableName = path.basename(csvFile, ".csv");
           const model = tableMap.get(tableName);

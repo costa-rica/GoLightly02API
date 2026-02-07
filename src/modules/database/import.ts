@@ -8,6 +8,13 @@ import logger from "../logger";
 import { AppError, ErrorCodes } from "../errorHandler";
 
 /**
+ * Check if a row is completely empty (all values are null or empty strings)
+ */
+function isEmptyRow(row: any): boolean {
+  return Object.values(row).every((value) => value === "" || value === null);
+}
+
+/**
  * Parse CSV row with NULL handling
  * Converts empty strings back to null values
  */
@@ -39,6 +46,11 @@ export async function importCSVToTable(
     fs.createReadStream(csvPath)
       .pipe(csv())
       .on("data", (row) => {
+        // Skip completely empty rows (happens when CSV has trailing newlines)
+        if (isEmptyRow(row)) {
+          return;
+        }
+
         // Parse row and handle NULL values
         const parsedRow = parseCSVRow(row);
         rows.push(parsedRow);
