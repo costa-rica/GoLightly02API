@@ -1,6 +1,45 @@
 import { sequelize, User } from "golightly02db";
 import { hashPassword } from "./passwordHash";
 import logger from "./logger";
+import path from "path";
+import { mkdir } from "fs/promises";
+
+/**
+ * Ensures all required project directories exist, creating them when missing.
+ */
+export const ensureProjectDirectories = async (): Promise<void> => {
+  const pathProjectResources = process.env.PATH_PROJECT_RESOURCES;
+  const pathToLogs = process.env.PATH_TO_LOGS;
+  const pathMp3Output = process.env.PATH_MP3_OUTPUT;
+  const pathMp3SoundFiles = process.env.PATH_MP3_SOUND_FILES;
+
+  const missingVars = [
+    ["PATH_PROJECT_RESOURCES", pathProjectResources],
+    ["PATH_TO_LOGS", pathToLogs],
+    ["PATH_MP3_OUTPUT", pathMp3Output],
+    ["PATH_MP3_SOUND_FILES", pathMp3SoundFiles],
+  ]
+    .filter(([, value]) => !value)
+    .map(([name]) => name);
+
+  if (missingVars.length > 0) {
+    throw new Error(
+      `Missing required environment variables for directory checks: ${missingVars.join(", ")}`,
+    );
+  }
+
+  const directoriesToEnsure = [
+    pathProjectResources!,
+    pathToLogs!,
+    pathMp3Output!,
+    pathMp3SoundFiles!,
+  ];
+
+  for (const directoryPath of directoriesToEnsure) {
+    await mkdir(directoryPath, { recursive: true });
+    logger.info(`Verified directory exists: ${directoryPath}`);
+  }
+};
 
 /**
  * Checks and creates the database if it doesn't exist
@@ -95,6 +134,9 @@ export const runStartupChecks = async (): Promise<void> => {
   logger.info("Running startup checks...");
 
   try {
+    // Ensure required directories exist
+    await ensureProjectDirectories();
+
     // Check and initialize database
     await checkDatabase();
 
