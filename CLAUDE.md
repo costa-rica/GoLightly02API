@@ -79,7 +79,7 @@ The API forwards this to **GoLightly02Queuer** (`URL_MANTRIFY01QUEUER` + `/medit
 
 ### Logging (Winston)
 
-Follows **docs/LOGGING_NODE_JS_V06.md** requirements:
+Follows **docs/requirements/LOGGING_NODE_JS_V06.md** requirements:
 
 - **Development**: Console only
 - **Testing**: Console + rotating files

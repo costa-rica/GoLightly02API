@@ -59,7 +59,7 @@ export const sendVerificationEmail = async (
     let htmlTemplate = fs.readFileSync(templatePath, "utf-8");
 
     // Build verification URL
-    const verificationUrl = `${process.env.URL_BASE_WEBSITE}/users/verify?token=${token}`;
+    const verificationUrl = `${process.env.URL_BASE_WEBSITE}/verify?token=${token}`;
 
     // Replace placeholders in template
     htmlTemplate = htmlTemplate.replace("{{verificationUrl}}", verificationUrl);
