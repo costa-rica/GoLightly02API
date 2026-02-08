@@ -6,7 +6,7 @@ Authentication is required for upload and delete endpoints, but the sound_files 
 
 ## GET /sounds/sound_files
 
-Retrieves a list of all available sound files that can be used in mantra creation.
+Retrieves a list of all available sound files that can be used in meditation creation.
 
 - Authentication: Not Required (public endpoint)
 - Returns all sound files with their metadata

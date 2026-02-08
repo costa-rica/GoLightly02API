@@ -1,6 +1,6 @@
-# Mantrify01API Requirements TODO
+# GoLightly02API Requirements TODO
 
-This document tracks the implementation progress for the Mantrify01API project.
+This document tracks the implementation progress for the GoLightly02API project.
 
 ## Phase 1: Project Setup and Infrastructure
 
@@ -13,7 +13,7 @@ This document tracks the implementation progress for the Mantrify01API project.
   - [x] winston
   - [x] dotenv
   - [x] cors, @types/cors
-  - [x] mantrify01db (custom package)
+  - [x] golightly02db (custom package)
 - [x] Set up TypeScript configuration (tsconfig.json)
 - [x] Create folder structure
   - [x] src/routes/
@@ -38,7 +38,7 @@ This document tracks the implementation progress for the Mantrify01API project.
   - [x] EMAIL_USER
   - [x] EMAIL_PASSWORD (app password)
   - [x] EMAIL_FROM
-- [x] Initialize database connection using mantrify01db package
+- [x] Initialize database connection using golightly02db package
 
 ## Phase 2: Logging Setup
 
@@ -113,27 +113,27 @@ This document tracks the implementation progress for the Mantrify01API project.
   - [x] Return token in response
   - [x] Error handling (user not found, email not verified, wrong password)
 
-## Phase 7: Mantras Router
+## Phase 7: Meditations Router
 
-- [x] Create src/routes/mantras.ts
+- [x] Create src/routes/meditations.ts
 - [x] Apply authentication middleware to all routes
-- [x] GET /mantras/sound_files
+- [x] GET /meditations/sound_files
   - [x] Query SoundFiles table
   - [x] Return list of sound files
   - [x] Error handling
-- [x] POST /mantras/create
-  - [x] Validate mantraArray exists in request body
-  - [x] Send POST request to queuer: URL_MANTRIFY01QUEUER + /mantras/new
+- [x] POST /meditations/create
+  - [x] Validate meditationArray exists in request body
+  - [x] Send POST request to queuer: URL_MANTRIFY01QUEUER + /meditations/new
   - [x] Wait for response starting with "Processing batch requests from CSV file"
   - [x] Return success if valid response
   - [x] Return error response if invalid or failed
   - [x] Error handling and logging
-- [x] DELETE /mantras/:id
-  - [x] Extract mantra ID from URL params
-  - [x] Verify ownership via ContractUsersMantras table
-  - [x] Find mantra in Mantras table
+- [x] DELETE /meditations/:id
+  - [x] Extract meditation ID from URL params
+  - [x] Verify ownership via ContractUsersMeditations table
+  - [x] Find meditation in Meditations table
   - [x] Delete .mp3 file from PATH_MP3_OUTPUT
-  - [x] Delete mantra from database
+  - [x] Delete meditation from database
   - [x] Return success response
   - [x] Error handling (not found, not owner, file deletion failed)
 
@@ -147,7 +147,7 @@ This document tracks the implementation progress for the Mantrify01API project.
   - [x] Add CORS middleware
   - [x] Add JSON body parser
   - [x] Register users router (/users)
-  - [x] Register mantras router (/mantras)
+  - [x] Register meditations router (/meditations)
   - [x] Add 404 handler
   - [x] Add error handling middleware
   - [x] Start server on PORT from .env
@@ -184,14 +184,14 @@ This document tracks the implementation progress for the Mantrify01API project.
   - [ ] Unverified email
   - [ ] Wrong password
   - [ ] User not found
-- [ ] Test GET /mantras/sound_files
+- [ ] Test GET /meditations/sound_files
   - [ ] With authentication
   - [ ] Without authentication
-- [ ] Test POST /mantras/create
-  - [ ] Valid mantra creation
+- [ ] Test POST /meditations/create
+  - [ ] Valid meditation creation
   - [ ] Queuer integration
   - [ ] Error handling
-- [ ] Test DELETE /mantras/:id
+- [ ] Test DELETE /meditations/:id
   - [ ] Owner can delete
   - [ ] Non-owner cannot delete
   - [ ] File deletion

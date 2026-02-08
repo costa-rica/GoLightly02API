@@ -205,7 +205,7 @@ curl --location 'http://localhost:3000/users/login' \
     "id": 1,
     "email": "user@example.com",
     "isAdmin": false,
-    "hasPublicMantras": true
+    "hasPublicMeditations": true
   }
 }
 ```
@@ -218,7 +218,7 @@ curl --location 'http://localhost:3000/users/login' \
   - `id` (number): User ID
   - `email` (string): User email address
   - `isAdmin` (boolean): Whether user has admin privileges
-  - `hasPublicMantras` (boolean): Whether user has any mantras with visibility set to "public"
+  - `hasPublicMeditations` (boolean): Whether user has any meditations with visibility set to "public"
 
 ### Error Responses
 
@@ -419,7 +419,7 @@ curl --location 'http://localhost:3000/users/reset-password' \
 The access token returned from login should be included in the `Authorization` header for all protected endpoints:
 
 ```bash
-curl --location 'http://localhost:3000/mantras/list' \
+curl --location 'http://localhost:3000/meditations/list' \
 --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
 ```
 
@@ -429,16 +429,17 @@ Self-service endpoint for users to delete their own account.
 
 - Authentication: Required (JWT token)
 - User can only delete their own account
-- Supports optional benevolent user conversion to preserve public mantras
+- Supports optional benevolent user conversion to preserve public meditations
 - User's JWT token becomes invalid after deletion
 - Full documentation available in [deleteUser.md](deleteUser.md)
 
 ### Parameters
 
 Request body:
+
 ```json
 {
-  "savePublicMantrasAsBenevolentUser": false  // optional, boolean, default: false
+  "savePublicMeditationsAsBenevolentUser": false // optional, boolean, default: false
 }
 ```
 
@@ -449,18 +450,19 @@ curl --location --request DELETE 'http://localhost:3000/users/me' \
 --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' \
 --header 'Content-Type: application/json' \
 --data-raw '{
-  "savePublicMantrasAsBenevolentUser": false
+  "savePublicMeditationsAsBenevolentUser": false
 }'
 ```
 
 ### Sample Response
 
 Success (200):
+
 ```json
 {
   "message": "Your account has been deleted successfully",
   "userId": 12,
-  "mantrasDeleted": 5,
+  "meditationsDeleted": 5,
   "elevenLabsFilesDeleted": 15,
   "benevolentUserCreated": false
 }
@@ -469,7 +471,7 @@ Success (200):
 ### Notes
 
 - After deletion, the user's JWT token becomes invalid
-- If `savePublicMantrasAsBenevolentUser: true`, public mantras are preserved and user is converted to benevolent user
+- If `savePublicMeditationsAsBenevolentUser: true`, public meditations are preserved and user is converted to benevolent user
 - Benevolent users cannot login (email is changed to `BenevolentUser{userId}@go-lightly.love`)
 - This operation cannot be undone
 - See [deleteUser.md](deleteUser.md) for complete documentation including:

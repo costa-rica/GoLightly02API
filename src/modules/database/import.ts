@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import csv from "csv-parser";
-import { sequelize } from "mantrify01db";
+import { sequelize } from "golightly02db";
 import { Transaction } from "sequelize";
 import { getAllTables } from "./export";
 import logger from "../logger";
@@ -74,14 +74,13 @@ export async function importCSVToTable(
           resolve(rows.length);
         } catch (error: any) {
           // Log detailed error information for debugging
-          const errorMessage = error.message || error.toString() || "Unknown error";
+          const errorMessage =
+            error.message || error.toString() || "Unknown error";
           const errorDetails = error.errors
             ? JSON.stringify(error.errors, null, 2)
             : "";
 
-          logger.error(
-            `Failed to import CSV to ${tableName}: ${errorMessage}`,
-          );
+          logger.error(`Failed to import CSV to ${tableName}: ${errorMessage}`);
           if (errorDetails) {
             logger.error(`Validation errors: ${errorDetails}`);
           }
@@ -147,7 +146,12 @@ export async function restoreFromBackup(
       }
 
       // Import the CSV
-      const rowCount = await importCSVToTable(csvPath, name, model, transaction);
+      const rowCount = await importCSVToTable(
+        csvPath,
+        name,
+        model,
+        transaction,
+      );
       importResults[name] = rowCount;
     }
 

@@ -1,5 +1,9 @@
 import { Router, Request, Response, NextFunction } from "express";
-import { SoundFiles, Mantra, ContractUsersMantras } from "mantrify01db";
+import {
+  SoundFiles,
+  Meditation,
+  ContractUsersMeditations,
+} from "golightly02db";
 import { authMiddleware } from "../modules/authMiddleware";
 import { AppError, ErrorCodes } from "../modules/errorHandler";
 import logger from "../modules/logger";
@@ -32,9 +36,7 @@ router.get(
         attributes: ["id", "name", "description", "filename"],
       });
 
-      logger.info(
-        `Sound files retrieved: ${soundFiles.length} files`
-      );
+      logger.info(`Sound files retrieved: ${soundFiles.length} files`);
 
       res.status(200).json({
         soundFiles,
@@ -46,11 +48,11 @@ router.get(
           ErrorCodes.INTERNAL_ERROR,
           "Failed to retrieve sound files",
           500,
-          error.message
-        )
+          error.message,
+        ),
       );
     }
-  }
+  },
 );
 
 // POST /sounds/upload (protected endpoint - requires authentication)
@@ -65,7 +67,7 @@ router.post(
         throw new AppError(
           ErrorCodes.VALIDATION_ERROR,
           "No file uploaded",
-          400
+          400,
         );
       }
 
@@ -74,7 +76,7 @@ router.post(
         throw new AppError(
           ErrorCodes.VALIDATION_ERROR,
           "Only .mp3 files are allowed",
-          400
+          400,
         );
       }
 
@@ -94,12 +96,12 @@ router.post(
 
       if (existingDbEntry) {
         logger.warn(
-          `Upload attempt failed: filename ${sanitizedFilename} already exists in database`
+          `Upload attempt failed: filename ${sanitizedFilename} already exists in database`,
         );
         throw new AppError(
           ErrorCodes.VALIDATION_ERROR,
           `A sound file with the name "${sanitizedFilename}" already exists`,
-          409
+          409,
         );
       }
 
@@ -109,7 +111,7 @@ router.post(
         throw new AppError(
           ErrorCodes.INTERNAL_ERROR,
           "Sound files path not configured",
-          500
+          500,
         );
       }
 
@@ -117,12 +119,12 @@ router.post(
       const filePath = path.join(outputPath, sanitizedFilename);
       if (fs.existsSync(filePath)) {
         logger.warn(
-          `Upload attempt failed: file ${sanitizedFilename} already exists on filesystem`
+          `Upload attempt failed: file ${sanitizedFilename} already exists on filesystem`,
         );
         throw new AppError(
           ErrorCodes.VALIDATION_ERROR,
           `A file with the name "${sanitizedFilename}" already exists on the server`,
-          409
+          409,
         );
       }
 
@@ -130,7 +132,7 @@ router.post(
       try {
         fs.writeFileSync(filePath, req.file.buffer);
         logger.info(
-          `Sound file saved to disk: ${filePath} (${req.file.size} bytes)`
+          `Sound file saved to disk: ${filePath} (${req.file.size} bytes)`,
         );
       } catch (error: any) {
         logger.error(`Failed to save file to disk: ${error.message}`);
@@ -138,7 +140,7 @@ router.post(
           ErrorCodes.INTERNAL_ERROR,
           "Failed to save file to server",
           500,
-          error.message
+          error.message,
         );
       }
 
@@ -151,7 +153,7 @@ router.post(
         });
 
         logger.info(
-          `Sound file uploaded successfully by user ${req.user?.userId}: ${sanitizedFilename} (ID: ${soundFile.id})`
+          `Sound file uploaded successfully by user ${req.user?.userId}: ${sanitizedFilename} (ID: ${soundFile.id})`,
         );
 
         res.status(201).json({
@@ -170,7 +172,7 @@ router.post(
           logger.info(`Cleaned up file after database error: ${filePath}`);
         } catch (cleanupError: any) {
           logger.error(
-            `Failed to cleanup file after database error: ${cleanupError.message}`
+            `Failed to cleanup file after database error: ${cleanupError.message}`,
           );
         }
 
@@ -179,7 +181,7 @@ router.post(
           ErrorCodes.INTERNAL_ERROR,
           "Failed to save sound file information",
           500,
-          error.message
+          error.message,
         );
       }
     } catch (error: any) {
@@ -192,12 +194,12 @@ router.post(
             ErrorCodes.INTERNAL_ERROR,
             "Failed to upload sound file",
             500,
-            error.message
-          )
+            error.message,
+          ),
         );
       }
     }
-  }
+  },
 );
 
 // DELETE /sounds/sound_file/:id (protected endpoint - requires authentication)
@@ -213,13 +215,13 @@ router.delete(
         throw new AppError(
           ErrorCodes.VALIDATION_ERROR,
           "Invalid sound file ID",
-          400
+          400,
         );
       }
 
-      // Get deleteLinkedMantras from request body
-      const { deleteLinkedMantras } = req.body;
-      const shouldDeleteLinkedMantras = deleteLinkedMantras === true;
+      // Get deleteLinkedMeditations from request body
+      const { deleteLinkedMeditations } = req.body;
+      const shouldDeleteLinkedMeditations = deleteLinkedMeditations === true;
 
       // Find sound file in database
       const soundFile = await SoundFiles.findByPk(soundFileId);
@@ -228,75 +230,82 @@ router.delete(
         throw new AppError(
           ErrorCodes.VALIDATION_ERROR,
           "Sound file not found",
-          404
+          404,
         );
       }
 
       const filename = soundFile.filename as string;
 
-      // Find all mantras that use this sound file
-      // Check if mantraArray contains an element with this sound_file
-      const allMantras = await Mantra.findAll();
-      const linkedMantras = allMantras.filter((mantra) => {
-        const mantraArray = mantra.get("mantraArray") as any[];
-        if (!Array.isArray(mantraArray)) return false;
+      // Find all meditations that use this sound file
+      // Check if meditationArray contains an element with this sound_file
+      const allMeditations = await Meditation.findAll();
+      const linkedMeditations = allMeditations.filter((meditation) => {
+        const meditationArray = meditation.get("meditationArray") as any[];
+        if (!Array.isArray(meditationArray)) return false;
 
-        return mantraArray.some(
-          (element) => element.sound_file === filename
+        return meditationArray.some(
+          (element) => element.sound_file === filename,
         );
       });
 
-      // If mantras are using this sound file and deleteLinkedMantras is false
-      if (linkedMantras.length > 0 && !shouldDeleteLinkedMantras) {
+      // If meditations are using this sound file and deleteLinkedMeditations is false
+      if (linkedMeditations.length > 0 && !shouldDeleteLinkedMeditations) {
         logger.warn(
-          `Cannot delete sound file ${filename}: used by ${linkedMantras.length} mantra(s)`
+          `Cannot delete sound file ${filename}: used by ${linkedMeditations.length} meditation(s)`,
         );
         throw new AppError(
           ErrorCodes.VALIDATION_ERROR,
-          `Cannot delete sound file because it is being used by mantras`,
+          `Cannot delete sound file because it is being used by meditations`,
           409,
-          `This sound file is used by ${linkedMantras.length} mantra(s). Set deleteLinkedMantras to true to delete them.`
+          `This sound file is used by ${linkedMeditations.length} meditation(s). Set deleteLinkedMeditations to true to delete them.`,
         );
       }
 
-      // Delete linked mantras if requested
-      if (linkedMantras.length > 0 && shouldDeleteLinkedMantras) {
+      // Delete linked meditations if requested
+      if (linkedMeditations.length > 0 && shouldDeleteLinkedMeditations) {
         logger.info(
-          `Deleting ${linkedMantras.length} mantra(s) linked to sound file ${filename}`
+          `Deleting ${linkedMeditations.length} meditation(s) linked to sound file ${filename}`,
         );
 
         const outputPath = process.env.PATH_MP3_OUTPUT;
         if (!outputPath) {
           throw new AppError(
             ErrorCodes.INTERNAL_ERROR,
-            "Mantra output path not configured",
-            500
+            "Meditation output path not configured",
+            500,
           );
         }
 
-        for (const mantra of linkedMantras) {
-          const mantraId = mantra.get("id") as number;
-          const mantraFilename = mantra.get("filename") as string | null;
+        for (const meditation of linkedMeditations) {
+          const meditationId = meditation.get("id") as number;
+          const meditationFilename = meditation.get("filename") as
+            | string
+            | null;
 
-          // Delete mantra file if it exists
-          if (mantraFilename) {
-            const mantraFilePath = path.join(outputPath, mantraFilename);
+          // Delete meditation file if it exists
+          if (meditationFilename) {
+            const meditationFilePath = path.join(
+              outputPath,
+              meditationFilename,
+            );
 
-            if (fs.existsSync(mantraFilePath)) {
+            if (fs.existsSync(meditationFilePath)) {
               try {
-                fs.unlinkSync(mantraFilePath);
-                logger.info(`Deleted mantra file: ${mantraFilePath}`);
+                fs.unlinkSync(meditationFilePath);
+                logger.info(`Deleted meditation file: ${meditationFilePath}`);
               } catch (error: any) {
                 logger.error(
-                  `Failed to delete mantra file ${mantraFilePath}: ${error.message}`
+                  `Failed to delete meditation file ${meditationFilePath}: ${error.message}`,
                 );
               }
             }
           }
 
-          // Delete mantra from database
-          await mantra.destroy();
-          logger.info(`Deleted mantra ${mantraId} linked to sound file ${filename}`);
+          // Delete meditation from database
+          await meditation.destroy();
+          logger.info(
+            `Deleted meditation ${meditationId} linked to sound file ${filename}`,
+          );
         }
       }
 
@@ -306,7 +315,7 @@ router.delete(
         throw new AppError(
           ErrorCodes.INTERNAL_ERROR,
           "Sound files path not configured",
-          500
+          500,
         );
       }
 
@@ -317,18 +326,18 @@ router.delete(
           logger.info(`Deleted sound file: ${soundFilePath}`);
         } catch (error: any) {
           logger.error(
-            `Failed to delete sound file ${soundFilePath}: ${error.message}`
+            `Failed to delete sound file ${soundFilePath}: ${error.message}`,
           );
           throw new AppError(
             ErrorCodes.INTERNAL_ERROR,
             "Failed to delete sound file from server",
             500,
-            error.message
+            error.message,
           );
         }
       } else {
         logger.warn(
-          `Sound file not found on filesystem: ${soundFilePath}. Proceeding with database deletion.`
+          `Sound file not found on filesystem: ${soundFilePath}. Proceeding with database deletion.`,
         );
       }
 
@@ -337,35 +346,35 @@ router.delete(
 
       logger.info(
         `Sound file ${soundFileId} deleted by user ${req.user?.userId}${
-          linkedMantras.length > 0
-            ? ` (with ${linkedMantras.length} linked mantra(s))`
+          linkedMeditations.length > 0
+            ? ` (with ${linkedMeditations.length} linked meditation(s))`
             : ""
-        }`
+        }`,
       );
 
       res.status(200).json({
         message: "Sound file deleted successfully",
         soundFileId,
-        deletedMantrasCount: linkedMantras.length,
+        deletedMeditationsCount: linkedMeditations.length,
       });
     } catch (error: any) {
       if (error instanceof AppError) {
         next(error);
       } else {
         logger.error(
-          `Failed to delete sound file ${req.params.id}: ${error.message}`
+          `Failed to delete sound file ${req.params.id}: ${error.message}`,
         );
         next(
           new AppError(
             ErrorCodes.INTERNAL_ERROR,
             "Failed to delete sound file",
             500,
-            error.message
-          )
+            error.message,
+          ),
         );
       }
     }
-  }
+  },
 );
 
 export default router;

@@ -1,23 +1,23 @@
-# Mantras Router
+# Meditations Router
 
-This router handles mantra creation, retrieval, streaming, favoriting, and deletion operations.
+This router handles meditation creation, retrieval, streaming, favoriting, and deletion operations.
 
-Most endpoints require authentication via JWT access token in the Authorization header. The streaming and all-mantras endpoints support optional authentication.
+Most endpoints require authentication via JWT access token in the Authorization header. The streaming and all-meditations endpoints support optional authentication.
 
-## POST /mantras/create
+## POST /meditations/create
 
-Creates a new meditation mantra by combining pauses, text-to-speech, and sound files.
+Creates a new meditation meditation by combining pauses, text-to-speech, and sound files.
 
 - Authentication: Required
-- Processes mantra through Mantrify01Queuer service
+- Processes meditation through GoLightly02Queuer service
 - Returns queue ID and final file path
-- Mantra array supports three element types: pause, text, and sound_file
+- Meditation array supports three element types: pause, text, and sound_file
 
 ### Parameters
 
 Request body:
 
-- `mantraArray` (array, required): Array of mantra elements in sequence
+- `meditationArray` (array, required): Array of meditation elements in sequence
 
 Each element must have an `id` and one of the following:
 
@@ -28,11 +28,11 @@ Each element must have an `id` and one of the following:
 ### Sample Request
 
 ```bash
-curl --location 'http://localhost:3000/mantras/create' \
+curl --location 'http://localhost:3000/meditations/create' \
 --header 'Content-Type: application/json' \
 --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' \
 --data '{
-  "mantraArray": [
+  "meditationArray": [
     {
       "id": 1,
       "pause_duration": "3.0"
@@ -55,21 +55,21 @@ curl --location 'http://localhost:3000/mantras/create' \
 
 ```json
 {
-  "message": "Mantra created successfully",
+  "message": "Meditation created successfully",
   "queueId": 1,
-  "filePath": "/Users/nick/Documents/_project_resources/Mantrify/audio_concatenator_output/20260203/output_20260203_113759.mp3"
+  "filePath": "/Users/nick/Documents/_project_resources/GoLightly/audio_concatenator_output/20260203/output_20260203_113759.mp3"
 }
 ```
 
 ### Error Responses
 
-#### Missing or invalid mantraArray (400)
+#### Missing or invalid meditationArray (400)
 
 ```json
 {
   "error": {
     "code": "VALIDATION_ERROR",
-    "message": "mantraArray is required and must be an array",
+    "message": "meditationArray is required and must be an array",
     "status": 400
   }
 }
@@ -99,7 +99,7 @@ curl --location 'http://localhost:3000/mantras/create' \
 }
 ```
 
-### Mantra element types
+### Meditation element types
 
 Pause element:
 
@@ -118,55 +118,55 @@ Sound file element:
 - `id` (number): Unique identifier for the element
 - `sound_file` (string): Filename from the sound_files endpoint
 
-## GET /mantras/:id/stream
+## GET /meditations/:id/stream
 
-Streams a mantra MP3 file with automatic listen tracking.
+Streams a meditation MP3 file with automatic listen tracking.
 
-- Authentication: Optional (private mantras require authentication and ownership verification)
+- Authentication: Optional (private meditations require authentication and ownership verification)
 - Supports HTTP range requests for audio seeking
-- Automatically tracks listens in both Mantras table and ContractUserMantraListen table (if authenticated)
+- Automatically tracks listens in both Meditations table and ContractUserMeditationsListen table (if authenticated)
 - Returns audio/mpeg stream
 
 ### Parameters
 
 URL parameters:
 
-- `id` (number, required): The mantra ID to stream
+- `id` (number, required): The meditation ID to stream
 
 ### Authorization Logic
 
-- **Public mantras** (visibility != "private"): Can be streamed by anyone (authenticated or anonymous)
-- **Private mantras** (visibility == "private"): Require authentication and user must own the mantra via ContractUsersMantras
+- **Public meditations** (visibility != "private"): Can be streamed by anyone (authenticated or anonymous)
+- **Private meditations** (visibility == "private"): Require authentication and user must own the meditation via ContractUsersMeditations
 
 ### Listen Tracking
 
 When the endpoint is called:
 
 - **If authenticated**:
-  - Creates or increments `listenCount` in `ContractUserMantraListen` table for the user-mantra pair
-  - Increments `listenCount` field in `Mantras` table by 1
+  - Creates or increments `listenCount` in `ContractUserMeditationsListen` table for the user-meditation pair
+  - Increments `listenCount` field in `Meditations` table by 1
 - **If anonymous**:
-  - Only increments `listenCount` field in `Mantras` table by 1
+  - Only increments `listenCount` field in `Meditations` table by 1
 
 ### Sample Request
 
-Stream a public mantra (no authentication):
+Stream a public meditation (no authentication):
 
 ```bash
-curl --location 'http://localhost:3000/mantras/1/stream'
+curl --location 'http://localhost:3000/meditations/1/stream'
 ```
 
-Stream with authentication (for private mantras or to track user listens):
+Stream with authentication (for private meditations or to track user listens):
 
 ```bash
-curl --location 'http://localhost:3000/mantras/1/stream' \
+curl --location 'http://localhost:3000/meditations/1/stream' \
 --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
 ```
 
 With range request (for audio seeking):
 
 ```bash
-curl --location 'http://localhost:3000/mantras/1/stream' \
+curl --location 'http://localhost:3000/meditations/1/stream' \
 --header 'Range: bytes=0-1023'
 ```
 
@@ -189,49 +189,49 @@ Success (206 - Partial content with range):
 
 ### Error Responses
 
-#### Invalid mantra ID (400)
+#### Invalid meditation ID (400)
 
 ```json
 {
   "error": {
     "code": "VALIDATION_ERROR",
-    "message": "Invalid mantra ID",
+    "message": "Invalid meditation ID",
     "status": 400
   }
 }
 ```
 
-#### Authentication required for private mantra (401)
+#### Authentication required for private meditation (401)
 
 ```json
 {
   "error": {
     "code": "AUTH_FAILED",
-    "message": "Authentication required to access private mantras",
+    "message": "Authentication required to access private meditations",
     "status": 401
   }
 }
 ```
 
-#### Unauthorized access to private mantra (403)
+#### Unauthorized access to private meditation (403)
 
 ```json
 {
   "error": {
     "code": "UNAUTHORIZED_ACCESS",
-    "message": "You do not have permission to access this mantra",
+    "message": "You do not have permission to access this meditation",
     "status": 403
   }
 }
 ```
 
-#### Mantra not found (404)
+#### Meditation not found (404)
 
 ```json
 {
   "error": {
     "code": "MANTRA_NOT_FOUND",
-    "message": "Mantra not found",
+    "message": "Meditation not found",
     "status": 404
   }
 }
@@ -243,7 +243,7 @@ Success (206 - Partial content with range):
 {
   "error": {
     "code": "MANTRA_NOT_FOUND",
-    "message": "Mantra audio file not found",
+    "message": "Meditation audio file not found",
     "status": 404
   }
 }
@@ -255,7 +255,7 @@ Success (206 - Partial content with range):
 {
   "error": {
     "code": "INTERNAL_ERROR",
-    "message": "Failed to stream mantra",
+    "message": "Failed to stream meditation",
     "status": 500
   }
 }
@@ -265,17 +265,17 @@ Success (206 - Partial content with range):
 
 - Supports HTTP range requests for audio player seeking functionality
 - Listen tracking happens before streaming begins
-- For authenticated users, each stream increments both the user-specific listen count and the total mantra listen count
-- For anonymous users, only the total mantra listen count is incremented
-- Private mantras cannot be accessed without proper authentication and ownership
+- For authenticated users, each stream increments both the user-specific listen count and the total meditation listen count
+- For anonymous users, only the total meditation listen count is incremented
+- Private meditations cannot be accessed without proper authentication and ownership
 - The endpoint uses optional authentication middleware, allowing both authenticated and anonymous access to public content
 
 ### Usage in NextJS
 
 ```javascript
 // Simple audio player in NextJS
-const AudioPlayer = ({ mantraId, authToken }) => {
-  const streamUrl = `http://localhost:3000/mantras/${mantraId}/stream`;
+const AudioPlayer = ({ meditationId, authToken }) => {
+  const streamUrl = `http://localhost:3000/meditations/${meditationId}/stream`;
 
   const headers = authToken
     ? {
@@ -292,14 +292,14 @@ const AudioPlayer = ({ mantraId, authToken }) => {
 };
 ```
 
-## GET /mantras/all
+## GET /meditations/all
 
-Retrieves a list of mantras with total listen counts and favorite counts.
+Retrieves a list of meditations with total listen counts and favorite counts.
 
 - Authentication: Optional
-- Anonymous users receive only public mantras
-- Authenticated users automatically receive public mantras plus their own private mantras
-- Each mantra includes a `listenCount` field with total listen count and a `favoriteCount` field showing how many users have favorited it
+- Anonymous users receive only public meditations
+- Authenticated users automatically receive public meditations plus their own private meditations
+- Each meditation includes a `listenCount` field with total listen count and a `favoriteCount` field showing how many users have favorited it
 - Behavior is determined by authentication state (no query parameters needed)
 
 ### Parameters
@@ -308,33 +308,33 @@ No parameters required. The response is automatically determined by authenticati
 
 ### Sample Request
 
-Anonymous access (public mantras only):
+Anonymous access (public meditations only):
 
 ```bash
-curl --location 'http://localhost:3000/mantras/all'
+curl --location 'http://localhost:3000/meditations/all'
 ```
 
-Authenticated access (public mantras + user's private mantras):
+Authenticated access (public meditations + user's private meditations):
 
 ```bash
-curl --location 'http://localhost:3000/mantras/all' \
+curl --location 'http://localhost:3000/meditations/all' \
 --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
 ```
 
 ### Sample Response
 
-Anonymous user response (public mantras only):
+Anonymous user response (public meditations only):
 
 ```json
 {
-  "mantrasArray": [
+  "meditationsArray": [
     {
       "id": 1,
       "title": "output_20260203_222033",
       "description": "Morning meditation session",
       "visibility": "public",
       "filename": "output_20260203_222033.mp3",
-      "filePath": "/Users/nick/Documents/_project_resources/Mantrify/audio_concatenator_output/20260203/",
+      "filePath": "/Users/nick/Documents/_project_resources/GoLightly/audio_concatenator_output/20260203/",
       "listenCount": 42,
       "favoriteCount": 8,
       "ownerUserId": 5,
@@ -345,18 +345,18 @@ Anonymous user response (public mantras only):
 }
 ```
 
-Authenticated user response (public mantras + user's private mantras):
+Authenticated user response (public meditations + user's private meditations):
 
 ```json
 {
-  "mantrasArray": [
+  "meditationsArray": [
     {
       "id": 1,
       "title": "output_20260203_222033",
       "description": "Morning meditation session",
       "visibility": "public",
       "filename": "output_20260203_222033.mp3",
-      "filePath": "/Users/nick/Documents/_project_resources/Mantrify/audio_concatenator_output/20260203/",
+      "filePath": "/Users/nick/Documents/_project_resources/GoLightly/audio_concatenator_output/20260203/",
       "listenCount": 42,
       "favoriteCount": 8,
       "ownerUserId": 5,
@@ -369,7 +369,7 @@ Authenticated user response (public mantras + user's private mantras):
       "description": null,
       "visibility": "private",
       "filename": "output_20260204_103015.mp3",
-      "filePath": "/Users/nick/Documents/_project_resources/Mantrify/audio_concatenator_output/20260204/",
+      "filePath": "/Users/nick/Documents/_project_resources/GoLightly/audio_concatenator_output/20260204/",
       "listenCount": 5,
       "favoriteCount": 2,
       "ownerUserId": 3,
@@ -388,7 +388,7 @@ Authenticated user response (public mantras + user's private mantras):
 {
   "error": {
     "code": "INTERNAL_ERROR",
-    "message": "Failed to retrieve mantras",
+    "message": "Failed to retrieve meditations",
     "status": 500
   }
 }
@@ -396,60 +396,60 @@ Authenticated user response (public mantras + user's private mantras):
 
 ### Notes
 
-- Public mantras are those where `visibility` is not "private"
-- Anonymous users can access the endpoint and will only receive public mantras
+- Public meditations are those where `visibility` is not "private"
+- Anonymous users can access the endpoint and will only receive public meditations
 - Authenticated users automatically receive:
-  - All public mantras
-  - Their own private mantras (verified via ContractUsersMantras)
+  - All public meditations
+  - Their own private meditations (verified via ContractUsersMeditations)
 - No query parameters are needed - authentication state determines the response
-- The `listenCount` field is read directly from the `Mantras` table for each mantra
-- The `favoriteCount` field is calculated by counting records in `ContractUserMantraListen` table where `favorite` is true for that mantra
+- The `listenCount` field is read directly from the `Meditations` table for each meditation
+- The `favoriteCount` field is calculated by counting records in `ContractUserMeditationsListen` table where `favorite` is true for that meditation
 - Listen counts and favorite counts are shown for all users (authenticated and anonymous)
-- All fields from the Mantras table are included in the response:
-  - `id`: Unique identifier for the mantra
-  - `title`: Name/title of the mantra
+- All fields from the Meditations table are included in the response:
+  - `id`: Unique identifier for the meditation
+  - `title`: Name/title of the meditation
   - `description`: Optional description text (can be null)
   - `visibility`: "public" or "private"
   - `filename`: Name of the MP3 file
-  - `filePath`: Full directory path to the mantra file
+  - `filePath`: Full directory path to the meditation file
   - `listenCount`: Total listen count across all users
-  - `favoriteCount`: Total number of users who have favorited this mantra
-  - `ownerUserId`: User ID of the mantra owner (from ContractUsersMantras table), or "missing" if no owner exists
-  - `createdAt`: Timestamp when mantra was created
-  - `updatedAt`: Timestamp when mantra was last updated
+  - `favoriteCount`: Total number of users who have favorited this meditation
+  - `ownerUserId`: User ID of the meditation owner (from ContractUsersMeditations table), or "missing" if no owner exists
+  - `createdAt`: Timestamp when meditation was created
+  - `updatedAt`: Timestamp when meditation was last updated
 - Uses optional authentication middleware, allowing both authenticated and anonymous access
 - Ownership information is fetched efficiently using a Sequelize LEFT JOIN
 - Favorite counts are fetched efficiently with a single grouped COUNT query
 
-## POST /mantras/favorite/:mantraId/:trueOrFalse
+## POST /meditations/favorite/:meditationId/:trueOrFalse
 
-Marks a mantra as favorited or unfavorited for the authenticated user.
+Marks a meditation as favorited or unfavorited for the authenticated user.
 
 - Authentication: Required
-- Creates or updates the ContractUserMantraListen record for the user-mantra pair
-- If the user has never listened to the mantra, creates a new record with listenCount=0
+- Creates or updates the ContractUserMeditationsListen record for the user-meditation pair
+- If the user has never listened to the meditation, creates a new record with listenCount=0
 - If a record exists, updates only the favorite field
 
 ### Parameters
 
 URL parameters:
 
-- `mantraId` (number, required): The ID of the mantra to favorite/unfavorite
+- `meditationId` (number, required): The ID of the meditation to favorite/unfavorite
 - `trueOrFalse` (string, required): Must be "true" to favorite or "false" to unfavorite
 
 ### Sample Request
 
-Favorite a mantra:
+Favorite a meditation:
 
 ```bash
-curl --location --request POST 'http://localhost:3000/mantras/favorite/5/true' \
+curl --location --request POST 'http://localhost:3000/meditations/favorite/5/true' \
 --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
 ```
 
-Unfavorite a mantra:
+Unfavorite a meditation:
 
 ```bash
-curl --location --request POST 'http://localhost:3000/mantras/favorite/5/false' \
+curl --location --request POST 'http://localhost:3000/meditations/favorite/5/false' \
 --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
 ```
 
@@ -459,21 +459,21 @@ Success (200):
 
 ```json
 {
-  "message": "Mantra favorited successfully",
-  "mantraId": 5,
+  "message": "Meditation favorited successfully",
+  "meditationId": 5,
   "favorite": true
 }
 ```
 
 ### Error Responses
 
-#### Invalid mantra ID (400)
+#### Invalid meditation ID (400)
 
 ```json
 {
   "error": {
     "code": "VALIDATION_ERROR",
-    "message": "Invalid mantra ID",
+    "message": "Invalid meditation ID",
     "status": 400
   }
 }
@@ -503,13 +503,13 @@ Success (200):
 }
 ```
 
-#### Mantra not found (404)
+#### Meditation not found (404)
 
 ```json
 {
   "error": {
     "code": "MANTRA_NOT_FOUND",
-    "message": "Mantra not found",
+    "message": "Meditation not found",
     "status": 404
   }
 }
@@ -529,31 +529,31 @@ Success (200):
 
 ### Notes
 
-- If the user has never listened to the mantra, a new ContractUserMantraListen record is created with `listenCount=0` and `favorite` set to the requested value
+- If the user has never listened to the meditation, a new ContractUserMeditationsListen record is created with `listenCount=0` and `favorite` set to the requested value
 - If a record already exists, only the `favorite` field is updated
-- The user does not need to own the mantra to favorite it
-- Favoriting works for both public and private mantras (as long as they exist in the database)
-- This endpoint does not verify ownership, allowing users to favorite any mantra
+- The user does not need to own the meditation to favorite it
+- Favoriting works for both public and private meditations (as long as they exist in the database)
+- This endpoint does not verify ownership, allowing users to favorite any meditation
 
-## PATCH /mantras/update/:id
+## PATCH /meditations/update/:id
 
-Updates metadata for an existing mantra.
+Updates metadata for an existing meditation.
 
 - Authentication: Required
-- User must own the mantra (verified via ContractUsersMantras)
+- User must own the meditation (verified via ContractUsersMeditations)
 - Supports partial updates (any combination of title, description, and/or visibility)
-- Returns the complete updated mantra object
+- Returns the complete updated meditation object
 
 ### Parameters
 
 URL parameters:
 
-- `id` (number, required): The mantra ID to update
+- `id` (number, required): The meditation ID to update
 
 Request body (at least one field required):
 
-- `title` (string, optional): New title for the mantra (must be non-empty if provided)
-- `description` (string, optional): New description for the mantra (can be null)
+- `title` (string, optional): New title for the meditation (must be non-empty if provided)
+- `description` (string, optional): New description for the meditation (can be null)
 - `visibility` (string, optional): Must be exactly "public" or "private" (lowercase)
 
 ### Sample Request
@@ -561,7 +561,7 @@ Request body (at least one field required):
 Update only the title:
 
 ```bash
-curl --location --request PATCH 'http://localhost:3000/mantras/update/5' \
+curl --location --request PATCH 'http://localhost:3000/meditations/update/5' \
 --header 'Content-Type: application/json' \
 --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' \
 --data '{
@@ -572,7 +572,7 @@ curl --location --request PATCH 'http://localhost:3000/mantras/update/5' \
 Update multiple fields:
 
 ```bash
-curl --location --request PATCH 'http://localhost:3000/mantras/update/5' \
+curl --location --request PATCH 'http://localhost:3000/meditations/update/5' \
 --header 'Content-Type: application/json' \
 --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' \
 --data '{
@@ -585,7 +585,7 @@ curl --location --request PATCH 'http://localhost:3000/mantras/update/5' \
 Update only visibility:
 
 ```bash
-curl --location --request PATCH 'http://localhost:3000/mantras/update/5' \
+curl --location --request PATCH 'http://localhost:3000/meditations/update/5' \
 --header 'Content-Type: application/json' \
 --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' \
 --data '{
@@ -599,14 +599,14 @@ Success (200):
 
 ```json
 {
-  "message": "Mantra updated successfully",
-  "mantra": {
+  "message": "Meditation updated successfully",
+  "meditation": {
     "id": 5,
     "title": "Evening Relaxation",
     "description": "A calming meditation for evening wind-down",
     "visibility": "public",
     "filename": "output_20260203_222033.mp3",
-    "filePath": "/Users/nick/Documents/_project_resources/Mantrify/audio_concatenator_output/20260203/",
+    "filePath": "/Users/nick/Documents/_project_resources/GoLightly/audio_concatenator_output/20260203/",
     "listenCount": 42,
     "createdAt": "2026-02-03T22:20:33.925Z",
     "updatedAt": "2026-02-06T14:32:18.456Z"
@@ -616,13 +616,13 @@ Success (200):
 
 ### Error Responses
 
-#### Invalid mantra ID (400)
+#### Invalid meditation ID (400)
 
 ```json
 {
   "error": {
     "code": "VALIDATION_ERROR",
-    "message": "Invalid mantra ID",
+    "message": "Invalid meditation ID",
     "status": 400
   }
 }
@@ -682,19 +682,19 @@ Success (200):
 {
   "error": {
     "code": "UNAUTHORIZED_ACCESS",
-    "message": "You do not have permission to update this mantra",
+    "message": "You do not have permission to update this meditation",
     "status": 403
   }
 }
 ```
 
-#### Mantra not found (404)
+#### Meditation not found (404)
 
 ```json
 {
   "error": {
     "code": "MANTRA_NOT_FOUND",
-    "message": "Mantra not found",
+    "message": "Meditation not found",
     "status": 404
   }
 }
@@ -706,7 +706,7 @@ Success (200):
 {
   "error": {
     "code": "INTERNAL_ERROR",
-    "message": "Failed to update mantra",
+    "message": "Failed to update meditation",
     "status": 500
   }
 }
@@ -719,28 +719,28 @@ Success (200):
 - Only fields that are provided and not null will be updated
 - Title is trimmed of whitespace if provided
 - Visibility must be exactly "public" or "private" (lowercase) - case-sensitive validation
-- User must own the mantra via ContractUsersMantras table to update it
-- The endpoint returns the complete mantra object after update, including all fields
+- User must own the meditation via ContractUsersMeditations table to update it
+- The endpoint returns the complete meditation object after update, including all fields
 - The `updatedAt` timestamp is automatically updated by Sequelize
 
-## DELETE /mantras/:id
+## DELETE /meditations/:id
 
-Deletes a mantra and its associated MP3 file.
+Deletes a meditation and its associated MP3 file.
 
 - Authentication: Required
-- User must own the mantra (verified via ContractUsersMantras)
+- User must own the meditation (verified via ContractUsersMeditations)
 - Deletes both the database record and the physical file
 
 ### Parameters
 
 URL parameters:
 
-- `id` (number, required): The mantra ID to delete
+- `id` (number, required): The meditation ID to delete
 
 ### Sample Request
 
 ```bash
-curl --location --request DELETE 'http://localhost:3000/mantras/5' \
+curl --location --request DELETE 'http://localhost:3000/meditations/5' \
 --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
 ```
 
@@ -748,20 +748,20 @@ curl --location --request DELETE 'http://localhost:3000/mantras/5' \
 
 ```json
 {
-  "message": "Mantra deleted successfully",
-  "mantraId": 5
+  "message": "Meditation deleted successfully",
+  "meditationId": 5
 }
 ```
 
 ### Error Responses
 
-#### Invalid mantra ID (400)
+#### Invalid meditation ID (400)
 
 ```json
 {
   "error": {
     "code": "VALIDATION_ERROR",
-    "message": "Invalid mantra ID",
+    "message": "Invalid meditation ID",
     "status": 400
   }
 }
@@ -785,19 +785,19 @@ curl --location --request DELETE 'http://localhost:3000/mantras/5' \
 {
   "error": {
     "code": "UNAUTHORIZED_ACCESS",
-    "message": "You do not have permission to delete this mantra",
+    "message": "You do not have permission to delete this meditation",
     "status": 403
   }
 }
 ```
 
-#### Mantra not found (404)
+#### Meditation not found (404)
 
 ```json
 {
   "error": {
     "code": "MANTRA_NOT_FOUND",
-    "message": "Mantra not found",
+    "message": "Meditation not found",
     "status": 404
   }
 }
@@ -809,7 +809,7 @@ curl --location --request DELETE 'http://localhost:3000/mantras/5' \
 {
   "error": {
     "code": "INTERNAL_ERROR",
-    "message": "Failed to delete mantra",
+    "message": "Failed to delete meditation",
     "status": 500
   }
 }

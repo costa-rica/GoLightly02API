@@ -1,4 +1,4 @@
-import { sequelize, User } from "mantrify01db";
+import { sequelize, User } from "golightly02db";
 import { hashPassword } from "./passwordHash";
 import logger from "./logger";
 
@@ -34,7 +34,9 @@ export const createAdminUser = async (): Promise<void> => {
     const adminEmail = process.env.EMAIL_USER;
 
     if (!adminEmail) {
-      logger.warn("EMAIL_USER environment variable not set. Skipping admin user creation.");
+      logger.warn(
+        "EMAIL_USER environment variable not set. Skipping admin user creation.",
+      );
       return;
     }
 
@@ -55,7 +57,7 @@ export const createAdminUser = async (): Promise<void> => {
       if (!existingUser.isAdmin) {
         await User.update(
           { isAdmin: true },
-          { where: { email: normalizedEmail } }
+          { where: { email: normalizedEmail } },
         );
         logger.info(`Updated existing user to admin: ${normalizedEmail}`);
       }
@@ -76,7 +78,9 @@ export const createAdminUser = async (): Promise<void> => {
     });
 
     logger.info(`Admin user created successfully: ${normalizedEmail}`);
-    logger.info(`Default password is "test" - please change it after first login`);
+    logger.info(
+      `Default password is "test" - please change it after first login`,
+    );
   } catch (error: any) {
     logger.error(`Failed to create admin user: ${error.message}`);
     throw new Error(`Admin user creation failed: ${error.message}`);

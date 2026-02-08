@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { User } from "mantrify01db";
+import { User } from "golightly02db";
 import { AppError, ErrorCodes } from "./errorHandler";
 import logger from "./logger";
 

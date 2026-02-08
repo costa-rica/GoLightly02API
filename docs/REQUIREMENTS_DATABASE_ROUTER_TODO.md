@@ -9,23 +9,25 @@ Create a new router at `src/routes/database.ts` with 5 endpoints for managing da
 ## Environment Variables
 
 Required:
+
 - `PATH_PROJECT_RESOURCES`: Base path where database_backups/ directory will be created
 
 ## Endpoints Summary
 
-| Endpoint | Method | Auth | Description |
-|----------|--------|------|-------------|
-| /database/create-backup | POST | Admin | Export all tables to CSV, zip folder, cleanup |
-| /database/backups-list | GET | Admin | List all backup .zip files |
-| /database/download-backup/:filename | GET | Admin | Download backup as attachment |
-| /database/delete-backup/:filename | DELETE | Admin | Delete backup file |
-| /database/replenish-database | POST | Admin | Restore database from uploaded .zip backup |
+| Endpoint                            | Method | Auth  | Description                                   |
+| ----------------------------------- | ------ | ----- | --------------------------------------------- |
+| /database/create-backup             | POST   | Admin | Export all tables to CSV, zip folder, cleanup |
+| /database/backups-list              | GET    | Admin | List all backup .zip files                    |
+| /database/download-backup/:filename | GET    | Admin | Download backup as attachment                 |
+| /database/delete-backup/:filename   | DELETE | Admin | Delete backup file                            |
+| /database/replenish-database        | POST   | Admin | Restore database from uploaded .zip backup    |
 
 ## Implementation Phases
 
 ### Phase 1: Setup and Middleware
 
 Tasks:
+
 - [x] Create `src/modules/database/` directory
 - [x] Create `src/modules/database/export.ts` file (table export and CSV creation)
 - [x] Create `src/modules/database/compression.ts` file (zip/unzip operations)
@@ -34,7 +36,7 @@ Tasks:
 - [x] Create `src/modules/database/filesystem.ts` file (directory creation, path management)
 - [x] Create `src/routes/database.ts` file
 - [x] Install required dependencies (archiver, csv-writer, csv-parser, multer, unzipper)
-- [x] Import database models from mantrify01db
+- [x] Import database models from golightly02db
 - [x] Import authMiddleware and create adminMiddleware (or verify admin in routes)
 - [x] Create router and apply authMiddleware to all routes
 - [x] Add admin check middleware/logic
@@ -46,26 +48,31 @@ Tasks:
 All helper functions are organized in `src/modules/database/` following the modular pattern of the codebase.
 
 #### src/modules/database/filesystem.ts
+
 - [x] `ensureBackupDirectory()` - Create `database_backups/` if missing
 - [x] `getBackupPath()` - Return full path to database_backups/
 - [x] `generateTimestamp()` - Create YYYYMMDD_HHMMSS format timestamp
 - [x] `cleanupDirectory(dirPath)` - Delete folder and contents
 
 #### src/modules/database/validation.ts
+
 - [x] `validateFilename(filename)` - Check for path traversal attacks (../, absolute paths)
 - [x] `validateZipExtension(filename)` - Ensure filename ends with .zip
 - [x] `sanitizeFilename(filename)` - Remove dangerous characters
 
 #### src/modules/database/export.ts
+
 - [x] `getAllTables()` - Return list of all Sequelize models/tables
 - [x] `exportTableToCSV(tableName, model, outputPath)` - Export single table to CSV with headers
 - [x] `createBackup(backupDir)` - Orchestrate full backup process (export all tables)
 
 #### src/modules/database/compression.ts
+
 - [x] `zipDirectory(sourceDir, outPath)` - Zip directory using archiver
 - [x] `extractZip(zipPath, extractPath)` - Extract zip file for restore using unzipper
 
 #### src/modules/database/import.ts
+
 - [x] `importCSVToTable(csvPath, tableName, model)` - Import single CSV to table
 - [x] `restoreFromBackup(extractedPath)` - Orchestrate full restore process (import all CSVs with transaction)
 - [x] `parseCSVRow(row)` - Parse CSV row with NULL handling
@@ -73,6 +80,7 @@ All helper functions are organized in `src/modules/database/` following the modu
 ### Phase 3: POST /database/create-backup
 
 Tasks:
+
 - [x] Validate user is authenticated and admin
 - [x] Check PATH_PROJECT_RESOURCES env var exists
 - [x] Call `ensureBackupDirectory()` to create database_backups/ if needed
@@ -98,6 +106,7 @@ Tasks:
 ### Phase 4: GET /database/backups-list
 
 Tasks:
+
 - [x] Validate user is authenticated and admin
 - [x] Check PATH_PROJECT_RESOURCES env var exists
 - [x] Get path to database_backups/ directory
@@ -115,6 +124,7 @@ Tasks:
 ### Phase 5: GET /database/download-backup/:filename
 
 Tasks:
+
 - [x] Validate user is authenticated and admin
 - [x] Extract :filename param from request
 - [x] Validate filename includes .zip extension
@@ -134,6 +144,7 @@ Tasks:
 ### Phase 6: DELETE /database/delete-backup/:filename
 
 Tasks:
+
 - [x] Validate user is authenticated and admin
 - [x] Extract :filename param from request
 - [x] Validate filename includes .zip extension
@@ -150,6 +161,7 @@ Tasks:
 ### Phase 7: POST /database/replenish-database
 
 Tasks:
+
 - [x] Validate user is authenticated and admin
 - [x] Set up multer middleware for file upload (accept .zip only)
 - [x] Validate uploaded file exists
@@ -183,6 +195,7 @@ Tasks:
 ### Phase 8: Documentation
 
 Tasks:
+
 - [x] Create `docs/api/database.md` with endpoint documentation
 - [x] Document each endpoint with:
   - Description
@@ -201,6 +214,7 @@ Tasks:
 ### Phase 9: Testing and Validation
 
 Tasks:
+
 - [ ] Test create-backup with empty database
 - [ ] Test create-backup with populated database
 - [ ] Test create-backup when PATH_PROJECT_RESOURCES is missing
@@ -225,39 +239,43 @@ Tasks:
 ## Technical Details
 
 ### CSV Format
+
 - First row contains column headers (exact column names from database)
 - NULL values represented as empty strings
 - Standard CSV escaping for special characters (quotes, commas, newlines)
 - UTF-8 encoding
 
 ### Backup File Structure
+
 ```
 database_backup_20260206_143022/
 ├── Users.csv
-├── Mantras.csv
-├── ContractUsersMantras.csv
-├── ContractUserMantraListen.csv
+├── Meditations.csv
+├── ContractUsersMeditations.csv
+├── ContractUserMeditationsListen.csv
 ├── ElevenLabsFiles.csv
 ├── Queue.csv
 ├── SoundFiles.csv
-├── ContractMantrasElevenLabsFiles.csv
-└── ContractMantrasSoundFiles.csv
+├── ContractMeditationsElevenLabsFiles.csv
+└── ContractMeditationsSoundFiles.csv
 ```
 
 After zipping: `database_backup_20260206_143022.zip`
 
 ### Tables to Export/Import
+
 1. Users
-2. Mantras
-3. ContractUsersMantras
-4. ContractUserMantraListen
+2. Meditations
+3. ContractUsersMeditations
+4. ContractUserMeditationsListen
 5. ElevenLabsFiles
 6. Queue
 7. SoundFiles
-8. ContractMantrasElevenLabsFiles
-9. ContractMantrasSoundFiles
+8. ContractMeditationsElevenLabsFiles
+9. ContractMeditationsSoundFiles
 
 ### Security Considerations
+
 - All endpoints require admin authentication
 - Path traversal validation on filename params
 - File type validation on uploads
@@ -266,6 +284,7 @@ After zipping: `database_backup_20260206_143022.zip`
 - Log all database operations with admin user ID
 
 ### Dependencies to Install
+
 ```bash
 npm install archiver csv-writer csv-parser multer
 npm install --save-dev @types/archiver @types/multer
@@ -274,6 +293,7 @@ npm install --save-dev @types/archiver @types/multer
 ## Error Codes
 
 Add to `src/modules/errorHandler.ts`:
+
 - `ADMIN_REQUIRED`: User is not an admin
 - `BACKUP_FAILED`: Backup creation failed
 - `BACKUP_NOT_FOUND`: Backup file not found
@@ -284,6 +304,7 @@ Add to `src/modules/errorHandler.ts`:
 ## Success Response Formats
 
 ### POST /database/create-backup
+
 ```json
 {
   "message": "Database backup created successfully",
@@ -295,6 +316,7 @@ Add to `src/modules/errorHandler.ts`:
 ```
 
 ### GET /database/backups-list
+
 ```json
 {
   "backups": [
@@ -310,6 +332,7 @@ Add to `src/modules/errorHandler.ts`:
 ```
 
 ### DELETE /database/delete-backup/:filename
+
 ```json
 {
   "message": "Backup deleted successfully",
@@ -318,20 +341,21 @@ Add to `src/modules/errorHandler.ts`:
 ```
 
 ### POST /database/replenish-database
+
 ```json
 {
   "message": "Database restored successfully",
   "tablesImported": 9,
   "rowsImported": {
     "Users": 5,
-    "Mantras": 12,
-    "ContractUsersMantras": 15,
-    "ContractUserMantraListen": 8,
+    "Meditations": 12,
+    "ContractUsersMeditations": 15,
+    "ContractUserMeditationsListen": 8,
     "ElevenLabsFiles": 20,
     "Queue": 3,
     "SoundFiles": 10,
-    "ContractMantrasElevenLabsFiles": 25,
-    "ContractMantrasSoundFiles": 18
+    "ContractMeditationsElevenLabsFiles": 25,
+    "ContractMeditationsSoundFiles": 18
   },
   "totalRows": 116
 }

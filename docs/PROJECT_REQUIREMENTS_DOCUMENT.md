@@ -1,8 +1,8 @@
-# Mantrify Project
+# GoLightly Project
 
 ## Project Overview
 
-This project is a web application that allows users to create and manage their own meditation mantras. The application is built using TypeScript, Express.js and will support a NextJS front end in the future.
+This project is a web application that allows users to create and manage their own meditation meditations. The application is built using TypeScript, Express.js and will support a NextJS front end in the future.
 
 ## Build process
 
@@ -12,7 +12,7 @@ This requirements document will be the basis for the engineers "To Do" list to b
 
 We want the codebase to be modular and easy to maintain. Store the code in the src directory. Types can be stored in the src/types directory. But all other modules or helper functions should be stored in the src/modules directory. Make as many as needed to keep the code modularized so that if we need to replace a module or change a process it can be done by chaning a file and limit the effect on other parts of the codebase.
 
-The router file for this first version will be mantras.ts (subdomain: mantras) and it will be located in the src/routes directory.
+The router file for this first version will be meditations.ts (subdomain: meditations) and it will be located in the src/routes directory.
 
 ## Authentication
 
@@ -20,7 +20,7 @@ Use JWT for authentication. There is a .env variable called JWT_SECRET that will
 
 ## Database
 
-The database is a sqlite / Sequlize database that uses the Mantrify01Db custom package to connect to it. Find the schema and how to use it in docs/DATABASE_OVERVIEW.md.
+The database is a sqlite / Sequlize database that uses the GoLightly02Db custom package to connect to it. Find the schema and how to use it in docs/DATABASE_OVERVIEW.md.
 
 ## Logging
 
@@ -57,17 +57,17 @@ This will update the database users table with the isEmailVerified=true and emai
 
 User's will login with email and password. But if the user's isEmailVerified=false, they will not be able to log in.
 
-## Mantras Router
+## Meditations Router
 
 All endpoints require authentication.
 
-### GET /mantras/sound_files
+### GET /meditations/sound_files
 
 This endpoint will return a list of sound files in the SoundFiles table. See database schema for more information.
 
-### POST /mantras/create
+### POST /meditations/create
 
-This endpoint will recieve a json with a mantraArray property. Each element in the mantraArray will be one of three types:
+This endpoint will recieve a json with a meditationArray property. Each element in the meditationArray will be one of three types:
 
 - pause
 - text
@@ -75,14 +75,14 @@ This endpoint will recieve a json with a mantraArray property. Each element in t
 
 ```json
 {
-  "mantraArray": [
+  "meditationArray": [
     {
       "id": 1,
       "pause_duration": "3.0"
     },
     {
       "id": 2,
-      "text": "This is my mantra",
+      "text": "This is my meditation",
       "voice_id": "Xb7hH8MSUJpSbSDYk0k2",
       "speed": "0.9"
     },
@@ -94,8 +94,8 @@ This endpoint will recieve a json with a mantraArray property. Each element in t
 }
 ```
 
-This endpoint will then send a request to the Mantrify01Queuer's POST /mantras/new endpoint with the mantraArray property. The queuer will be running locally with the base url found in the .env file's URL_MANTRIFY01QUERER variable.
+This endpoint will then send a request to the GoLightly02Queuer's POST /meditations/new endpoint with the meditationArray property. The queuer will be running locally with the base url found in the .env file's URL_MANTRIFY01QUERER variable.
 
-### DELETE /mantras/:id
+### DELETE /meditations/:id
 
-This endpoint will find the mantra in the mantras table and delete a mantra .mp3 file from the PATH_MP3_OUTPUT and after that delete the mantra from the database.
+This endpoint will find the meditation in the meditations table and delete a meditation .mp3 file from the PATH_MP3_OUTPUT and after that delete the meditation from the database.

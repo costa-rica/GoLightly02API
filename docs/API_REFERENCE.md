@@ -1,4 +1,4 @@
-# Mantrify01 API Reference
+# GoLightly02 API Reference
 
 This API is an ExpressJS TypeScript API that provides a RESTful interface for interacting with the SQLite database using Sequelize ORM.
 
@@ -7,12 +7,12 @@ This file serves as the top-level API index.
 Each resource has its own documentation under the [`/api`](./api) folder:
 
 - [users](./api/users.md)
-- [mantras](./api/mantras.md)
+- [meditations](./api/meditations.md)
 - [sounds](./api/sounds.md)
 - [admin](./api/admin.md)
 - [database](./api/database.md)
 
-File names should be in lower case and follow the pattern of their router subdomain. This means routers that have two words will have a hyphen between them. If we make a router for the subdomain "contract-users-mantra" the file will be named docs/api/contract-users-mantra.md.
+File names should be in lower case and follow the pattern of their router subdomain. This means routers that have two words will have a hyphen between them. If we make a router for the subdomain "contract-users-meditation" the file will be named docs/api/contract-users-meditation.md.
 
 ## Endpoint documentation format
 

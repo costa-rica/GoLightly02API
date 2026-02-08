@@ -1,12 +1,12 @@
-# Mantrify01API
+# GoLightly02API
 
 ## Project Overview
 
-Mantrify01API is a REST API for creating and managing meditation mantras. Built with TypeScript and Express.js, it handles user authentication, mantra creation requests, and integrates with the Mantrify01Queuer service for audio processing.
+GoLightly02API is a REST API for creating and managing meditation meditations. Built with TypeScript and Express.js, it handles user authentication, meditation creation requests, and integrates with the GoLightly02Queuer service for audio processing.
 
 ## Setup
 
-1. Ensure the local dependency exists at `../Mantrify01Db`
+1. Ensure the local dependency exists at `../GoLightly02Db`
 2. Install dependencies: `npm install`
 3. Configure environment variables (see .env section below)
 4. Build the project: `npm run build`
@@ -14,11 +14,13 @@ Mantrify01API is a REST API for creating and managing meditation mantras. Built 
 ## Usage
 
 Development mode with hot reload:
+
 ```bash
 npm run dev
 ```
 
 Production mode:
+
 ```bash
 npm run build
 npm start
@@ -29,26 +31,29 @@ The API will be available at `http://localhost:3000` (or the PORT specified in y
 ### API Endpoints
 
 Users:
+
 - POST `/users/register` - Register a new user (receives verification email)
 - GET `/users/verify?token=<token>` - Verify email address
 - POST `/users/login` - Login and receive JWT access token
 
-Mantras (all require authentication):
-- GET `/mantras/sound_files` - List available sound files
-- POST `/mantras/create` - Create a new mantra (queues for processing)
-- DELETE `/mantras/:id` - Delete a mantra (verifies ownership)
+Meditations (all require authentication):
+
+- GET `/meditations/sound_files` - List available sound files
+- POST `/meditations/create` - Create a new meditation (queues for processing)
+- DELETE `/meditations/:id` - Delete a meditation (verifies ownership)
 
 Health check:
+
 - GET `/health` - Service health status
 
 ## Project Structure
 
 ```
-Mantrify01API/
+GoLightly02API/
 ├── src/
 │   ├── routes/
 │   │   ├── users.ts          # User authentication endpoints
-│   │   └── mantras.ts        # Mantra management endpoints
+│   │   └── meditations.ts        # Meditation management endpoints
 │   ├── modules/
 │   │   ├── logger.ts         # Winston logging configuration
 │   │   ├── errorHandler.ts  # Error handling utilities
@@ -79,27 +84,27 @@ Mantrify01API/
 
 ```
 # Application
-NAME_APP=Mantrify01API
+NAME_APP=GoLightly02API
 NODE_ENV=development
 PORT=3000
 
 # JWT Authentication
 JWT_SECRET=your-secret-key-here
 
-# Database (Mantrify01Db package)
+# Database (GoLightly02Db package)
 PATH_DATABASE=/path/to/database/directory
-NAME_DB=mantrify.sqlite
+NAME_DB=golightly.sqlite
 
 # Logging
 PATH_TO_LOGS=/path/to/logs
 LOG_MAX_SIZE=5
 LOG_MAX_FILES=5
 
-# Mantrify01Queuer Integration
+# GoLightly02Queuer Integration
 URL_MANTRIFY01QUEUER=http://localhost:3001
 
 # File Paths
-PATH_MP3_OUTPUT=/path/to/completed/mantras
+PATH_MP3_OUTPUT=/path/to/completed/meditations
 PATH_MP3_SOUND_FILES=/path/to/sound/files
 
 # Email (Gmail SMTP)
@@ -107,7 +112,7 @@ EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
 EMAIL_USER=your-email@gmail.com
 EMAIL_PASSWORD=your-app-password-here
-EMAIL_FROM=Mantrify <your-email@gmail.com>
+EMAIL_FROM=GoLightly <your-email@gmail.com>
 ```
 
 ## References

@@ -1,14 +1,14 @@
 import { Router, Request, Response, NextFunction } from "express";
 import {
   User,
-  Mantra,
-  ContractUserMantraListen,
+  Meditation,
+  ContractUserMeditationsListen,
   Queue,
-} from "mantrify01db";
+} from "golightly02db";
 import { authMiddleware } from "../modules/authMiddleware";
 import { AppError, ErrorCodes } from "../modules/errorHandler";
 import logger from "../modules/logger";
-import { checkUserHasPublicMantras } from "../modules/userPublicMantras";
+import { checkUserHasPublicMeditations } from "../modules/userPublicMeditations";
 import { deleteUser } from "../modules/deleteUser";
 import fs from "fs";
 import path from "path";
@@ -22,7 +22,7 @@ router.use(authMiddleware);
 const adminMiddleware = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const userId = req.user?.userId;
@@ -31,7 +31,7 @@ const adminMiddleware = async (
       throw new AppError(
         ErrorCodes.AUTH_FAILED,
         "Authentication required",
-        401
+        401,
       );
     }
 
@@ -48,7 +48,7 @@ const adminMiddleware = async (
       throw new AppError(
         ErrorCodes.UNAUTHORIZED_ACCESS,
         "Admin access required",
-        403
+        403,
       );
     }
 
@@ -63,8 +63,8 @@ const adminMiddleware = async (
           ErrorCodes.INTERNAL_ERROR,
           "Failed to verify admin status",
           500,
-          error.message
-        )
+          error.message,
+        ),
       );
     }
   }
@@ -91,25 +91,26 @@ router.get(
         ],
       });
 
-      // Add hasPublicMantras to each user
-      const usersWithPublicMantras = await Promise.all(
+      // Add hasPublicMeditations to each user
+      const usersWithPublicMeditations = await Promise.all(
         users.map(async (user) => {
           const userId = user.get("id") as number;
-          const hasPublicMantras = await checkUserHasPublicMantras(userId);
+          const hasPublicMeditations =
+            await checkUserHasPublicMeditations(userId);
 
           return {
             ...user.get({ plain: true }),
-            hasPublicMantras,
+            hasPublicMeditations,
           };
-        })
+        }),
       );
 
       logger.info(
-        `Admin user ${req.user?.userId} retrieved ${users.length} users`
+        `Admin user ${req.user?.userId} retrieved ${users.length} users`,
       );
 
       res.status(200).json({
-        users: usersWithPublicMantras,
+        users: usersWithPublicMeditations,
       });
     } catch (error: any) {
       logger.error(`Failed to retrieve users: ${error.message}`);
@@ -118,30 +119,30 @@ router.get(
           ErrorCodes.INTERNAL_ERROR,
           "Failed to retrieve users",
           500,
-          error.message
-        )
+          error.message,
+        ),
       );
     }
-  }
+  },
 );
 
-// GET /admin/mantras
+// GET /admin/meditations
 router.get(
-  "/mantras",
+  "/meditations",
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // Get ALL mantras regardless of visibility
-      const mantras = await Mantra.findAll();
+      // Get ALL meditations regardless of visibility
+      const meditations = await Meditation.findAll();
 
-      // Calculate listens for each mantra
-      const mantrasWithListens = await Promise.all(
-        mantras.map(async (mantra) => {
-          const mantraId = mantra.get("id") as number;
+      // Calculate listens for each meditation
+      const meditationsWithListens = await Promise.all(
+        meditations.map(async (meditation) => {
+          const meditationId = meditation.get("id") as number;
 
-          // Get all listen records for this mantra
-          const listenRecords = await ContractUserMantraListen.findAll({
+          // Get all listen records for this meditation
+          const listenRecords = await ContractUserMeditationsListen.findAll({
             where: {
-              mantraId,
+              meditationId,
             },
           });
 
@@ -151,68 +152,68 @@ router.get(
               const listenCount = record.get("listenCount") as number;
               return sum + (listenCount || 0);
             },
-            0
+            0,
           );
 
-          // Return mantra with all fields plus listens
+          // Return meditation with all fields plus listens
           return {
-            ...mantra.get({ plain: true }),
+            ...meditation.get({ plain: true }),
             listens: totalListens,
           };
-        })
+        }),
       );
 
       logger.info(
-        `Admin user ${req.user?.userId} retrieved ${mantrasWithListens.length} mantras (all)`
+        `Admin user ${req.user?.userId} retrieved ${meditationsWithListens.length} meditations (all)`,
       );
 
       res.status(200).json({
-        mantras: mantrasWithListens,
+        meditations: meditationsWithListens,
       });
     } catch (error: any) {
-      logger.error(`Failed to retrieve mantras: ${error.message}`);
+      logger.error(`Failed to retrieve meditations: ${error.message}`);
       next(
         new AppError(
           ErrorCodes.INTERNAL_ERROR,
-          "Failed to retrieve mantras",
+          "Failed to retrieve meditations",
           500,
-          error.message
-        )
+          error.message,
+        ),
       );
     }
-  }
+  },
 );
 
-// DELETE /admin/mantras/:mantraId
+// DELETE /admin/meditations/:meditationId
 router.delete(
-  "/mantras/:mantraId",
+  "/meditations/:meditationId",
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const mantraId = parseInt(req.params.mantraId, 10);
+      const meditationId = parseInt(req.params.meditationId, 10);
 
       // Validate ID
-      if (isNaN(mantraId)) {
+      if (isNaN(meditationId)) {
         throw new AppError(
           ErrorCodes.VALIDATION_ERROR,
-          "Invalid mantra ID",
-          400
+          "Invalid meditation ID",
+          400,
         );
       }
 
-      // Find mantra in database
-      const mantra = await Mantra.findByPk(mantraId);
+      // Find meditation in database
+      const meditation = await Meditation.findByPk(meditationId);
 
-      if (!mantra) {
+      if (!meditation) {
         throw new AppError(
           ErrorCodes.MANTRA_NOT_FOUND,
-          "Mantra not found",
-          404
+          "Meditation not found",
+          404,
         );
       }
 
       // Get file path components from database
-      const dbFilePath = mantra.get("filePath") as string | null;
-      const filename = mantra.get("filename") as string | null;
+      const dbFilePath = meditation.get("filePath") as string | null;
+      const filename = meditation.get("filename") as string | null;
 
       // Delete MP3 file if it exists
       if (filename) {
@@ -227,8 +228,8 @@ router.delete(
           if (!outputPath) {
             throw new AppError(
               ErrorCodes.INTERNAL_ERROR,
-              "Mantra output path not configured",
-              500
+              "Meditation output path not configured",
+              500,
             );
           }
           fullFilePath = path.join(outputPath, filename);
@@ -237,54 +238,54 @@ router.delete(
         if (fs.existsSync(fullFilePath)) {
           try {
             fs.unlinkSync(fullFilePath);
-            logger.info(`Admin deleted mantra file: ${fullFilePath}`);
+            logger.info(`Admin deleted meditation file: ${fullFilePath}`);
           } catch (error: any) {
             logger.error(
-              `Failed to delete mantra file ${fullFilePath}: ${error.message}`
+              `Failed to delete meditation file ${fullFilePath}: ${error.message}`,
             );
             throw new AppError(
               ErrorCodes.INTERNAL_ERROR,
-              "Failed to delete mantra file",
+              "Failed to delete meditation file",
               500,
-              error.message
+              error.message,
             );
           }
         } else {
           logger.warn(
-            `Mantra file not found for deletion: ${fullFilePath}. Proceeding with database deletion.`
+            `Meditation file not found for deletion: ${fullFilePath}. Proceeding with database deletion.`,
           );
         }
       }
 
-      // Delete mantra from database
-      await mantra.destroy();
+      // Delete meditation from database
+      await meditation.destroy();
 
       logger.info(
-        `Admin user ${req.user?.userId} deleted mantra ${mantraId}`
+        `Admin user ${req.user?.userId} deleted meditation ${meditationId}`,
       );
 
       res.status(200).json({
-        message: "Mantra deleted successfully",
-        mantraId,
+        message: "Meditation deleted successfully",
+        meditationId,
       });
     } catch (error: any) {
       if (error instanceof AppError) {
         next(error);
       } else {
         logger.error(
-          `Failed to delete mantra ${req.params.mantraId}: ${error.message}`
+          `Failed to delete meditation ${req.params.meditationId}: ${error.message}`,
         );
         next(
           new AppError(
             ErrorCodes.INTERNAL_ERROR,
-            "Failed to delete mantra",
+            "Failed to delete meditation",
             500,
-            error.message
-          )
+            error.message,
+          ),
         );
       }
     }
-  }
+  },
 );
 
 // GET /admin/queuer
@@ -298,7 +299,7 @@ router.get(
       });
 
       logger.info(
-        `Admin user ${req.user?.userId} retrieved ${queueRecords.length} queue records`
+        `Admin user ${req.user?.userId} retrieved ${queueRecords.length} queue records`,
       );
 
       res.status(200).json({
@@ -311,11 +312,11 @@ router.get(
           ErrorCodes.INTERNAL_ERROR,
           "Failed to retrieve queue records",
           500,
-          error.message
-        )
+          error.message,
+        ),
       );
     }
-  }
+  },
 );
 
 // DELETE /admin/users/:userId
@@ -327,28 +328,27 @@ router.delete(
 
       // Validate userId is a valid number
       if (isNaN(userId)) {
-        throw new AppError(
-          ErrorCodes.VALIDATION_ERROR,
-          "Invalid user ID",
-          400
-        );
+        throw new AppError(ErrorCodes.VALIDATION_ERROR, "Invalid user ID", 400);
       }
 
-      // Extract savePublicMantrasAsBenevolentUser from request body (default: false)
-      const savePublicMantrasAsBenevolentUser =
-        req.body.savePublicMantrasAsBenevolentUser === true;
+      // Extract savePublicMeditationsAsBenevolentUser from request body (default: false)
+      const savePublicMeditationsAsBenevolentUser =
+        req.body.savePublicMeditationsAsBenevolentUser === true;
 
       logger.info(
-        `Admin user ${req.user?.userId} initiated deletion of user ${userId}`
+        `Admin user ${req.user?.userId} initiated deletion of user ${userId}`,
       );
 
       // Call deleteUser module
-      const result = await deleteUser(userId, savePublicMantrasAsBenevolentUser);
+      const result = await deleteUser(
+        userId,
+        savePublicMeditationsAsBenevolentUser,
+      );
 
       res.status(200).json({
         message: "User deleted successfully",
         userId: result.userId,
-        mantrasDeleted: result.mantrasDeleted,
+        meditationsDeleted: result.meditationsDeleted,
         elevenLabsFilesDeleted: result.elevenLabsFilesDeleted,
         benevolentUserCreated: result.benevolentUserCreated,
       });
@@ -356,18 +356,20 @@ router.delete(
       if (error instanceof AppError) {
         next(error);
       } else {
-        logger.error(`Failed to delete user ${req.params.userId}: ${error.message}`);
+        logger.error(
+          `Failed to delete user ${req.params.userId}: ${error.message}`,
+        );
         next(
           new AppError(
             ErrorCodes.INTERNAL_ERROR,
             "Failed to delete user",
             500,
-            error.message
-          )
+            error.message,
+          ),
         );
       }
     }
-  }
+  },
 );
 
 export default router;

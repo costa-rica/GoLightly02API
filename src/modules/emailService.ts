@@ -12,12 +12,12 @@ const requiredEmailVars = [
   "EMAIL_FROM",
 ];
 const missingEmailVars = requiredEmailVars.filter(
-  (varName) => !process.env[varName]
+  (varName) => !process.env[varName],
 );
 
 if (missingEmailVars.length > 0) {
   console.error(
-    `[FATAL] Missing required email environment variables: ${missingEmailVars.join(", ")}`
+    `[FATAL] Missing required email environment variables: ${missingEmailVars.join(", ")}`,
   );
   process.exit(1);
 }
@@ -51,7 +51,7 @@ const resolveTemplatePath = (templateName: string): string => {
 // Send verification email
 export const sendVerificationEmail = async (
   email: string,
-  token: string
+  token: string,
 ): Promise<void> => {
   try {
     // Read HTML template
@@ -68,13 +68,15 @@ export const sendVerificationEmail = async (
     await transporter.sendMail({
       from: process.env.EMAIL_FROM!,
       to: email,
-      subject: "Verify your Mantrify account",
+      subject: "Verify your GoLightly account",
       html: htmlTemplate,
     });
 
     logger.info(`Verification email sent to ${email}`);
   } catch (error: any) {
-    logger.error(`Failed to send verification email to ${email}: ${error.message}`);
+    logger.error(
+      `Failed to send verification email to ${email}: ${error.message}`,
+    );
     throw new Error(`Failed to send verification email: ${error.message}`);
   }
 };
@@ -82,7 +84,7 @@ export const sendVerificationEmail = async (
 // Send password reset email
 export const sendPasswordResetEmail = async (
   email: string,
-  token: string
+  token: string,
 ): Promise<void> => {
   try {
     // Read HTML template
@@ -99,13 +101,15 @@ export const sendPasswordResetEmail = async (
     await transporter.sendMail({
       from: process.env.EMAIL_FROM!,
       to: email,
-      subject: "Reset your Mantrify password",
+      subject: "Reset your GoLightly password",
       html: htmlTemplate,
     });
 
     logger.info(`Password reset email sent to ${email}`);
   } catch (error: any) {
-    logger.error(`Failed to send password reset email to ${email}: ${error.message}`);
+    logger.error(
+      `Failed to send password reset email to ${email}: ${error.message}`,
+    );
     throw new Error(`Failed to send password reset email: ${error.message}`);
   }
 };

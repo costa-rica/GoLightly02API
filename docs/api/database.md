@@ -253,14 +253,14 @@ Success (200):
   "tablesImported": 9,
   "rowsImported": {
     "Users": 5,
-    "Mantras": 12,
-    "ContractUsersMantras": 15,
-    "ContractUserMantraListen": 8,
+    "Meditations": 12,
+    "ContractUsersMeditations": 15,
+    "ContractUserMeditationsListen": 8,
     "ElevenLabsFiles": 20,
     "Queue": 3,
     "SoundFiles": 10,
-    "ContractMantrasElevenLabsFiles": 25,
-    "ContractMantrasSoundFiles": 18
+    "ContractMeditationsElevenLabsFiles": 25,
+    "ContractMeditationsSoundFiles": 18
   },
   "totalRows": 116
 }

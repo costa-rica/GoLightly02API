@@ -1,10 +1,10 @@
 import { Router, Request, Response, NextFunction } from "express";
 import {
-  Mantra,
-  ContractUsersMantras,
-  ContractUserMantraListen,
+  Meditation,
+  ContractUsersMeditations,
+  ContractUserMeditationsListen,
   sequelize,
-} from "mantrify01db";
+} from "golightly02db";
 import { Op } from "sequelize";
 import { authMiddleware } from "../modules/authMiddleware";
 import { optionalAuthMiddleware } from "../modules/optionalAuthMiddleware";
@@ -23,72 +23,72 @@ interface QueuerResponse {
 
 const router = Router();
 
-// GET /mantras/:id/stream - Stream mantra MP3 file (optional authentication)
+// GET /meditations/:id/stream - Stream meditation MP3 file (optional authentication)
 router.get(
   "/:id/stream",
   optionalAuthMiddleware,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const mantraId = parseInt(req.params.id, 10);
+      const meditationId = parseInt(req.params.id, 10);
 
       // Validate ID
-      if (isNaN(mantraId)) {
+      if (isNaN(meditationId)) {
         throw new AppError(
           ErrorCodes.VALIDATION_ERROR,
-          "Invalid mantra ID",
+          "Invalid meditation ID",
           400,
         );
       }
 
-      // Find mantra in database
-      const mantra = await Mantra.findByPk(mantraId);
+      // Find meditation in database
+      const meditation = await Meditation.findByPk(meditationId);
 
-      if (!mantra) {
+      if (!meditation) {
         throw new AppError(
           ErrorCodes.MANTRA_NOT_FOUND,
-          "Mantra not found",
+          "Meditation not found",
           404,
         );
       }
 
-      const visibility = mantra.get("visibility") as string;
+      const visibility = meditation.get("visibility") as string;
 
-      // Authorization check for private mantras
+      // Authorization check for private meditations
       if (visibility === "private") {
-        // Private mantras require authentication
+        // Private meditations require authentication
         if (!req.user) {
           throw new AppError(
             ErrorCodes.AUTH_FAILED,
-            "Authentication required to access private mantras",
+            "Authentication required to access private meditations",
             401,
           );
         }
 
-        // Verify ownership via ContractUsersMantras
-        const ownership = await ContractUsersMantras.findOne({
+        // Verify ownership via ContractUsersMeditations
+        const ownership = await ContractUsersMeditations.findOne({
           where: {
             userId: req.user.userId,
-            mantraId: mantraId,
+            meditationId: meditationId,
           },
         });
 
         if (!ownership) {
           throw new AppError(
             ErrorCodes.UNAUTHORIZED_ACCESS,
-            "You do not have permission to access this mantra",
+            "You do not have permission to access this meditation",
             403,
           );
         }
       }
 
       // Get file path components from database
-      const dbFilePath = mantra.get("filePath") as string | null; // Directory path with trailing slash
-      const filename = mantra.get("filename") as string | null;
+      const dbFilePath = meditation.get("filePath") as string | null; // Directory path with trailing slash
+      const filename = meditation.get("filename") as string | null;
 
       if (!filename) {
         throw new AppError(
           ErrorCodes.INTERNAL_ERROR,
-          "Mantra file information not found",
+          "Meditation file information not found",
           500,
         );
       }
@@ -105,7 +105,7 @@ router.get(
         if (!outputPath) {
           throw new AppError(
             ErrorCodes.INTERNAL_ERROR,
-            "Mantra output path not configured",
+            "Meditation output path not configured",
             500,
           );
         }
@@ -114,10 +114,10 @@ router.get(
 
       // Verify file exists
       if (!fs.existsSync(fullFilePath)) {
-        logger.error(`Mantra file not found: ${fullFilePath}`);
+        logger.error(`Meditation file not found: ${fullFilePath}`);
         throw new AppError(
           ErrorCodes.MANTRA_NOT_FOUND,
-          "Mantra audio file not found",
+          "Meditation audio file not found",
           404,
         );
       }
@@ -128,7 +128,7 @@ router.get(
         logger.error(`Path is not a file: ${fullFilePath}`);
         throw new AppError(
           ErrorCodes.MANTRA_NOT_FOUND,
-          "Mantra audio file not found",
+          "Meditation audio file not found",
           404,
         );
       }
@@ -138,16 +138,16 @@ router.get(
         // Authenticated user - track in both tables
         const userId = req.user.userId;
 
-        // Find or create ContractUserMantraListen record
+        // Find or create ContractUserMeditationsListen record
         const [listenRecord, created] =
-          await ContractUserMantraListen.findOrCreate({
+          await ContractUserMeditationsListen.findOrCreate({
             where: {
               userId,
-              mantraId,
+              meditationId,
             },
             defaults: {
               userId,
-              mantraId,
+              meditationId,
               listenCount: 1,
             },
           });
@@ -160,23 +160,23 @@ router.get(
           });
         }
 
-        // Increment listens in Mantras table
-        const currentListens = (mantra.get("listenCount") as number) || 0;
-        await mantra.update({
+        // Increment listens in Meditations table
+        const currentListens = (meditation.get("listenCount") as number) || 0;
+        await meditation.update({
           listenCount: currentListens + 1,
         });
 
         logger.info(
-          `Mantra ${mantraId} streamed by user ${userId} (listen count: ${created ? 1 : (listenRecord.get("listenCount") as number)})`,
+          `Meditation ${meditationId} streamed by user ${userId} (listen count: ${created ? 1 : (listenRecord.get("listenCount") as number)})`,
         );
       } else {
-        // Anonymous user - only track in Mantras table
-        const currentListens = (mantra.get("listenCount") as number) || 0;
-        await mantra.update({
+        // Anonymous user - only track in Meditations table
+        const currentListens = (meditation.get("listenCount") as number) || 0;
+        await meditation.update({
           listenCount: currentListens + 1,
         });
 
-        logger.info(`Mantra ${mantraId} streamed anonymously`);
+        logger.info(`Meditation ${meditationId} streamed anonymously`);
       }
 
       // Get file size from stats we already have
@@ -218,12 +218,12 @@ router.get(
         next(error);
       } else {
         logger.error(
-          `Failed to stream mantra ${req.params.id}: ${error.message}`,
+          `Failed to stream meditation ${req.params.id}: ${error.message}`,
         );
         next(
           new AppError(
             ErrorCodes.INTERNAL_ERROR,
-            "Failed to stream mantra",
+            "Failed to stream meditation",
             500,
             error.message,
           ),
@@ -233,51 +233,51 @@ router.get(
   },
 );
 
-// GET /mantras/all - Retrieve mantras with optional authentication
+// GET /meditations/all - Retrieve meditations with optional authentication
 router.get(
   "/all",
   optionalAuthMiddleware,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      let mantras: any[];
+      let meditations: any[];
 
       if (req.user) {
-        // Authenticated user - get public mantras + user's private mantras
-        const userMantras = await ContractUsersMantras.findAll({
+        // Authenticated user - get public meditations + user's private meditations
+        const userMeditations = await ContractUsersMeditations.findAll({
           where: {
             userId: req.user.userId,
           },
         });
 
-        const userMantraIds = userMantras.map(
-          (contract) => contract.get("mantraId") as number,
+        const userMeditationIds = userMeditations.map(
+          (contract) => contract.get("meditationId") as number,
         );
 
-        // Get all public mantras with ownership info
-        const publicMantras = await Mantra.findAll({
+        // Get all public meditations with ownership info
+        const publicMeditations = await Meditation.findAll({
           where: {
             visibility: { [Op.ne]: "private" },
           },
           include: [
             {
-              model: ContractUsersMantras,
-              as: "contractUsersMantras",
+              model: ContractUsersMeditations,
+              as: "contractUsersMeditations",
               required: false,
               attributes: ["userId"],
             },
           ],
         });
 
-        // Get user's private mantras with ownership info
-        const userPrivateMantras = await Mantra.findAll({
+        // Get user's private meditations with ownership info
+        const userPrivateMeditations = await Meditation.findAll({
           where: {
-            id: { [Op.in]: userMantraIds },
+            id: { [Op.in]: userMeditationIds },
             visibility: "private",
           },
           include: [
             {
-              model: ContractUsersMantras,
-              as: "contractUsersMantras",
+              model: ContractUsersMeditations,
+              as: "contractUsersMeditations",
               required: false,
               attributes: ["userId"],
             },
@@ -285,26 +285,29 @@ router.get(
         });
 
         // Combine and deduplicate
-        const allMantras = [...publicMantras, ...userPrivateMantras];
-        const uniqueMantraIds = new Set<number>();
-        mantras = allMantras.filter((mantra) => {
-          const id = mantra.get("id") as number;
-          if (uniqueMantraIds.has(id)) {
+        const allMeditations = [
+          ...publicMeditations,
+          ...userPrivateMeditations,
+        ];
+        const uniqueMeditationIds = new Set<number>();
+        meditations = allMeditations.filter((meditation) => {
+          const id = meditation.get("id") as number;
+          if (uniqueMeditationIds.has(id)) {
             return false;
           }
-          uniqueMantraIds.add(id);
+          uniqueMeditationIds.add(id);
           return true;
         });
       } else {
-        // Anonymous user - get only public mantras with ownership info
-        mantras = await Mantra.findAll({
+        // Anonymous user - get only public meditations with ownership info
+        meditations = await Meditation.findAll({
           where: {
             visibility: { [Op.ne]: "private" },
           },
           include: [
             {
-              model: ContractUsersMantras,
-              as: "contractUsersMantras",
+              model: ContractUsersMeditations,
+              as: "contractUsersMeditations",
               required: false,
               attributes: ["userId"],
             },
@@ -312,72 +315,77 @@ router.get(
         });
       }
 
-      // Get favorite counts for all mantras
-      const mantraIds = mantras.map((mantra) => mantra.get("id") as number);
+      // Get favorite counts for all meditations
+      const meditationIds = meditations.map(
+        (meditation) => meditation.get("id") as number,
+      );
 
-      const favoriteCounts = await ContractUserMantraListen.findAll({
+      const favoriteCounts = await ContractUserMeditationsListen.findAll({
         where: {
-          mantraId: { [Op.in]: mantraIds },
+          meditationId: { [Op.in]: meditationIds },
           favorite: true,
         },
         attributes: [
-          "mantraId",
+          "meditationId",
           [sequelize.fn("COUNT", sequelize.col("id")), "favoriteCount"],
         ],
-        group: ["mantraId"],
+        group: ["meditationId"],
         raw: true,
       });
 
-      // Create a map of mantraId to favoriteCount for quick lookup
+      // Create a map of meditationId to favoriteCount for quick lookup
       const favoriteCountMap = new Map<number, number>();
       favoriteCounts.forEach((record: any) => {
-        favoriteCountMap.set(record.mantraId, parseInt(record.favoriteCount, 10));
+        favoriteCountMap.set(
+          record.meditationId,
+          parseInt(record.favoriteCount, 10),
+        );
       });
 
-      const mantrasWithListens = mantras.map((mantra) => {
-        const plainMantra = mantra.get({ plain: true }) as {
+      const meditationsWithListens = meditations.map((meditation) => {
+        const plainMeditation = meditation.get({ plain: true }) as {
           id: number;
           listenCount?: number | null;
-          contractUsersMantras?: Array<{ userId: number }>;
+          contractUsersMeditations?: Array<{ userId: number }>;
         };
 
-        // Extract ownerUserId from contractUsersMantras relationship
+        // Extract ownerUserId from contractUsersMeditations relationship
         let ownerUserId: number | string = "missing";
         if (
-          plainMantra.contractUsersMantras &&
-          plainMantra.contractUsersMantras.length > 0
+          plainMeditation.contractUsersMeditations &&
+          plainMeditation.contractUsersMeditations.length > 0
         ) {
-          ownerUserId = plainMantra.contractUsersMantras[0].userId;
+          ownerUserId = plainMeditation.contractUsersMeditations[0].userId;
         }
 
-        // Remove the contractUsersMantras array from response
-        const { contractUsersMantras: _, ...mantraWithoutContract } =
-          plainMantra;
+        // Remove the contractUsersMeditations array from response
+        const { contractUsersMeditations: _, ...meditationWithoutContract } =
+          plainMeditation;
 
         return {
-          ...mantraWithoutContract,
-          listenCount: plainMantra.listenCount ?? 0,
-          favoriteCount: favoriteCountMap.get(plainMantra.id) ?? 0,
+          ...meditationWithoutContract,
+          listenCount: plainMeditation.listenCount ?? 0,
+          favoriteCount: favoriteCountMap.get(plainMeditation.id) ?? 0,
           ownerUserId,
         };
       });
 
       logger.info(
-        `Mantras retrieved${req.user ? ` for user ${req.user.userId}` : " anonymously"}: ${mantrasWithListens.length} mantras`,
+        `Meditations retrieved${req.user ? ` for user ${req.user.userId}` : " anonymously"}: ${meditationsWithListens.length} meditations`,
       );
 
       res.status(200).json({
-        mantrasArray: mantrasWithListens,
+        meditationsArray: meditationsWithListens,
       });
     } catch (error: any) {
       if (error instanceof AppError) {
         next(error);
       } else {
-        logger.error(`Failed to retrieve mantras: ${error.message}`);
+        logger.error(`Failed to retrieve meditations: ${error.message}`);
         next(
           new AppError(
             ErrorCodes.INTERNAL_ERROR,
-            "Failed to retrieve mantras",
+            "Failed to retrieve meditations",
             500,
             error.message,
           ),
@@ -390,19 +398,19 @@ router.get(
 // Apply authentication middleware to all routes below this point
 router.use(authMiddleware);
 
-// POST /mantras/favorite/:mantraId/:trueOrFalse
+// POST /meditations/favorite/:meditationId/:trueOrFalse
 router.post(
-  "/favorite/:mantraId/:trueOrFalse",
+  "/favorite/:meditationId/:trueOrFalse",
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const mantraId = parseInt(req.params.mantraId, 10);
+      const meditationId = parseInt(req.params.meditationId, 10);
       const trueOrFalse = req.params.trueOrFalse;
 
-      // Validate mantraId
-      if (isNaN(mantraId)) {
+      // Validate meditationId
+      if (isNaN(meditationId)) {
         throw new AppError(
           ErrorCodes.VALIDATION_ERROR,
-          "Invalid mantra ID",
+          "Invalid meditation ID",
           400,
         );
       }
@@ -418,28 +426,28 @@ router.post(
 
       const favoriteValue = trueOrFalse === "true";
 
-      // Verify mantra exists
-      const mantra = await Mantra.findByPk(mantraId);
-      if (!mantra) {
+      // Verify meditation exists
+      const meditation = await Meditation.findByPk(meditationId);
+      if (!meditation) {
         throw new AppError(
           ErrorCodes.MANTRA_NOT_FOUND,
-          "Mantra not found",
+          "Meditation not found",
           404,
         );
       }
 
       const userId = req.user!.userId;
 
-      // Find or create ContractUserMantraListen record
+      // Find or create ContractUserMeditationsListen record
       const [listenRecord, created] =
-        await ContractUserMantraListen.findOrCreate({
+        await ContractUserMeditationsListen.findOrCreate({
           where: {
             userId,
-            mantraId,
+            meditationId,
           },
           defaults: {
             userId,
-            mantraId,
+            meditationId,
             listenCount: 0,
             favorite: favoriteValue,
           },
@@ -453,12 +461,12 @@ router.post(
       }
 
       logger.info(
-        `User ${userId} ${favoriteValue ? "favorited" : "unfavorited"} mantra ${mantraId}`,
+        `User ${userId} ${favoriteValue ? "favorited" : "unfavorited"} meditation ${meditationId}`,
       );
 
       res.status(200).json({
-        message: `Mantra ${favoriteValue ? "favorited" : "unfavorited"} successfully`,
-        mantraId,
+        message: `Meditation ${favoriteValue ? "favorited" : "unfavorited"} successfully`,
+        meditationId,
         favorite: favoriteValue,
       });
     } catch (error: any) {
@@ -466,7 +474,7 @@ router.post(
         next(error);
       } else {
         logger.error(
-          `Failed to update favorite for mantra ${req.params.mantraId}: ${error.message}`,
+          `Failed to update favorite for meditation ${req.params.meditationId}: ${error.message}`,
         );
         next(
           new AppError(
@@ -481,18 +489,18 @@ router.post(
   },
 );
 
-// POST /mantras/create
+// POST /meditations/create
 router.post(
   "/create",
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { mantraArray } = req.body;
+      const { meditationArray } = req.body;
 
-      // Validate mantraArray exists
-      if (!mantraArray || !Array.isArray(mantraArray)) {
+      // Validate meditationArray exists
+      if (!meditationArray || !Array.isArray(meditationArray)) {
         throw new AppError(
           ErrorCodes.VALIDATION_ERROR,
-          "mantraArray is required and must be an array",
+          "meditationArray is required and must be an array",
           400,
         );
       }
@@ -500,7 +508,7 @@ router.post(
       // Log complete request in development mode
       if (process.env.NODE_ENV === "development") {
         logger.info(
-          `[DEV] POST /mantras/create request body: ${JSON.stringify(req.body, null, 2)}`,
+          `[DEV] POST /meditations/create request body: ${JSON.stringify(req.body, null, 2)}`,
         );
       }
 
@@ -515,11 +523,11 @@ router.post(
       }
 
       logger.info(
-        `User ${req.user?.userId} creating mantra with ${mantraArray.length} elements`,
+        `User ${req.user?.userId} creating meditation with ${meditationArray.length} elements`,
       );
 
       // Send request to queuer
-      const queuerEndpoint = `${queuerUrl}/mantras/new`;
+      const queuerEndpoint = `${queuerUrl}/meditations/new`;
       const response = await fetch(queuerEndpoint, {
         method: "POST",
         headers: {
@@ -527,7 +535,7 @@ router.post(
         },
         body: JSON.stringify({
           userId: req.user?.userId,
-          mantraArray,
+          meditationArray,
         }),
       });
 
@@ -568,18 +576,18 @@ router.post(
         );
         throw new AppError(
           ErrorCodes.QUEUER_ERROR,
-          responseData.message || "Queuer failed to process mantra",
+          responseData.message || "Queuer failed to process meditation",
           500,
           JSON.stringify(responseData),
         );
       }
 
       logger.info(
-        `Mantra successfully created for user ${req.user?.userId}: queueId=${responseData.queueId}, file=${responseData.finalFilePath}`,
+        `Meditation successfully created for user ${req.user?.userId}: queueId=${responseData.queueId}, file=${responseData.finalFilePath}`,
       );
 
       res.status(201).json({
-        message: "Mantra created successfully",
+        message: "Meditation created successfully",
         queueId: responseData.queueId,
         filePath: responseData.finalFilePath,
       });
@@ -588,7 +596,7 @@ router.post(
         next(error);
       } else {
         logger.error(
-          `Failed to create mantra for user ${req.user?.userId}: ${error.message}`,
+          `Failed to create meditation for user ${req.user?.userId}: ${error.message}`,
         );
         next(
           new AppError(
@@ -603,19 +611,19 @@ router.post(
   },
 );
 
-// PATCH /mantras/update/:id
+// PATCH /meditations/update/:id
 router.patch(
   "/update/:id",
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const mantraId = parseInt(req.params.id, 10);
+      const meditationId = parseInt(req.params.id, 10);
       const { title, description, visibility } = req.body;
 
       // Validate ID
-      if (isNaN(mantraId)) {
+      if (isNaN(meditationId)) {
         throw new AppError(
           ErrorCodes.VALIDATION_ERROR,
-          "Invalid mantra ID",
+          "Invalid meditation ID",
           400,
         );
       }
@@ -655,29 +663,29 @@ router.patch(
         }
       }
 
-      // Verify ownership via ContractUsersMantras
-      const ownership = await ContractUsersMantras.findOne({
+      // Verify ownership via ContractUsersMeditations
+      const ownership = await ContractUsersMeditations.findOne({
         where: {
           userId: req.user?.userId,
-          mantraId: mantraId,
+          meditationId: meditationId,
         },
       });
 
       if (!ownership) {
         throw new AppError(
           ErrorCodes.UNAUTHORIZED_ACCESS,
-          "You do not have permission to update this mantra",
+          "You do not have permission to update this meditation",
           403,
         );
       }
 
-      // Find mantra in database
-      const mantra = await Mantra.findByPk(mantraId);
+      // Find meditation in database
+      const meditation = await Meditation.findByPk(meditationId);
 
-      if (!mantra) {
+      if (!meditation) {
         throw new AppError(
           ErrorCodes.MANTRA_NOT_FOUND,
-          "Mantra not found",
+          "Meditation not found",
           404,
         );
       }
@@ -701,31 +709,31 @@ router.patch(
         updateData.visibility = visibility;
       }
 
-      // Update mantra
-      await mantra.update(updateData);
+      // Update meditation
+      await meditation.update(updateData);
 
       // Reload to get updated values
-      await mantra.reload();
+      await meditation.reload();
 
       logger.info(
-        `Mantra ${mantraId} updated by user ${req.user?.userId}: ${JSON.stringify(updateData)}`,
+        `Meditation ${meditationId} updated by user ${req.user?.userId}: ${JSON.stringify(updateData)}`,
       );
 
       res.status(200).json({
-        message: "Mantra updated successfully",
-        mantra: mantra.get({ plain: true }),
+        message: "Meditation updated successfully",
+        meditation: meditation.get({ plain: true }),
       });
     } catch (error: any) {
       if (error instanceof AppError) {
         next(error);
       } else {
         logger.error(
-          `Failed to update mantra ${req.params.id}: ${error.message}`,
+          `Failed to update meditation ${req.params.id}: ${error.message}`,
         );
         next(
           new AppError(
             ErrorCodes.INTERNAL_ERROR,
-            "Failed to update mantra",
+            "Failed to update meditation",
             500,
             error.message,
           ),
@@ -735,98 +743,100 @@ router.patch(
   },
 );
 
-// DELETE /mantras/:id
+// DELETE /meditations/:id
 router.delete(
   "/:id",
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const mantraId = parseInt(req.params.id, 10);
+      const meditationId = parseInt(req.params.id, 10);
 
       // Validate ID
-      if (isNaN(mantraId)) {
+      if (isNaN(meditationId)) {
         throw new AppError(
           ErrorCodes.VALIDATION_ERROR,
-          "Invalid mantra ID",
+          "Invalid meditation ID",
           400,
         );
       }
 
-      // Verify ownership via ContractUsersMantras
-      const ownership = await ContractUsersMantras.findOne({
+      // Verify ownership via ContractUsersMeditations
+      const ownership = await ContractUsersMeditations.findOne({
         where: {
           userId: req.user?.userId,
-          mantraId: mantraId,
+          meditationId: meditationId,
         },
       });
 
       if (!ownership) {
         throw new AppError(
           ErrorCodes.UNAUTHORIZED_ACCESS,
-          "You do not have permission to delete this mantra",
+          "You do not have permission to delete this meditation",
           403,
         );
       }
 
-      // Find mantra in database
-      const mantra = await Mantra.findByPk(mantraId);
+      // Find meditation in database
+      const meditation = await Meditation.findByPk(meditationId);
 
-      if (!mantra) {
+      if (!meditation) {
         throw new AppError(
           ErrorCodes.MANTRA_NOT_FOUND,
-          "Mantra not found",
+          "Meditation not found",
           404,
         );
       }
 
       // Delete MP3 file if it exists
-      if (mantra.filename) {
+      if (meditation.filename) {
         const filePath = path.join(
           process.env.PATH_MP3_OUTPUT || "",
-          mantra.filename as string,
+          meditation.filename as string,
         );
 
         if (fs.existsSync(filePath)) {
           try {
             fs.unlinkSync(filePath);
-            logger.info(`Deleted mantra file: ${filePath}`);
+            logger.info(`Deleted meditation file: ${filePath}`);
           } catch (error: any) {
             logger.error(
-              `Failed to delete mantra file ${filePath}: ${error.message}`,
+              `Failed to delete meditation file ${filePath}: ${error.message}`,
             );
             throw new AppError(
               ErrorCodes.INTERNAL_ERROR,
-              "Failed to delete mantra file",
+              "Failed to delete meditation file",
               500,
               error.message,
             );
           }
         } else {
           logger.warn(
-            `Mantra file not found for deletion: ${filePath}. Proceeding with database deletion.`,
+            `Meditation file not found for deletion: ${filePath}. Proceeding with database deletion.`,
           );
         }
       }
 
-      // Delete mantra from database
-      await mantra.destroy();
+      // Delete meditation from database
+      await meditation.destroy();
 
-      logger.info(`Mantra ${mantraId} deleted by user ${req.user?.userId}`);
+      logger.info(
+        `Meditation ${meditationId} deleted by user ${req.user?.userId}`,
+      );
 
       res.status(200).json({
-        message: "Mantra deleted successfully",
-        mantraId,
+        message: "Meditation deleted successfully",
+        meditationId,
       });
     } catch (error: any) {
       if (error instanceof AppError) {
         next(error);
       } else {
         logger.error(
-          `Failed to delete mantra ${req.params.id}: ${error.message}`,
+          `Failed to delete meditation ${req.params.id}: ${error.message}`,
         );
         next(
           new AppError(
             ErrorCodes.INTERNAL_ERROR,
-            "Failed to delete mantra",
+            "Failed to delete meditation",
             500,
             error.message,
           ),

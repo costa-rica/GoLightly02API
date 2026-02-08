@@ -1,14 +1,14 @@
 import {
   User,
-  Mantra,
-  ContractUsersMantras,
-  ContractUserMantraListen,
+  Meditation,
+  ContractUsersMeditations,
+  ContractUserMeditationsListen,
   ElevenLabsFiles,
   Queue,
   SoundFiles,
-  ContractMantrasElevenLabsFiles,
-  ContractMantrasSoundFiles,
-} from "mantrify01db";
+  ContractMeditationsElevenLabsFiles,
+  ContractMeditationsSoundFiles,
+} from "golightly02db";
 import { createObjectCsvWriter } from "csv-writer";
 import path from "path";
 import logger from "../logger";
@@ -20,14 +20,23 @@ import { AppError, ErrorCodes } from "../errorHandler";
 export function getAllTables(): Array<{ name: string; model: any }> {
   return [
     { name: "Users", model: User },
-    { name: "Mantras", model: Mantra },
-    { name: "ContractUsersMantras", model: ContractUsersMantras },
-    { name: "ContractUserMantraListen", model: ContractUserMantraListen },
+    { name: "Meditations", model: Meditation },
+    { name: "ContractUsersMeditations", model: ContractUsersMeditations },
+    {
+      name: "ContractUserMeditationsListen",
+      model: ContractUserMeditationsListen,
+    },
     { name: "ElevenLabsFiles", model: ElevenLabsFiles },
     { name: "Queue", model: Queue },
     { name: "SoundFiles", model: SoundFiles },
-    { name: "ContractMantrasElevenLabsFiles", model: ContractMantrasElevenLabsFiles },
-    { name: "ContractMantrasSoundFiles", model: ContractMantrasSoundFiles },
+    {
+      name: "ContractMeditationsElevenLabsFiles",
+      model: ContractMeditationsElevenLabsFiles,
+    },
+    {
+      name: "ContractMeditationsSoundFiles",
+      model: ContractMeditationsSoundFiles,
+    },
   ];
 }
 

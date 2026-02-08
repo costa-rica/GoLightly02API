@@ -2,7 +2,7 @@
 
 ## Overview
 
-Implement a modular user deletion process that handles file cleanup, database record removal, and optional public mantra preservation through user anonymization.
+Implement a modular user deletion process that handles file cleanup, database record removal, and optional public meditation preservation through user anonymization.
 
 ## Target Endpoints
 
@@ -13,13 +13,14 @@ Implement a modular user deletion process that handles file cleanup, database re
 
 ```json
 {
-  "savePublicMantrasAsBenevolentUser": true  // optional, boolean, default: false
+  "savePublicMeditationsAsBenevolentUser": true // optional, boolean, default: false
 }
 ```
 
 ---
 
 ## PHASE 1: Core Delete User Module
+
 **Create the reusable deleteUser module with data collection logic**
 
 - [x] Create `/src/modules/deleteUser.ts` file
@@ -28,20 +29,20 @@ Implement a modular user deletion process that handles file cleanup, database re
   ```typescript
   export async function deleteUser(
     userId: number,
-    savePublicMantrasAsBenevolentUser: boolean = false
-  ): Promise<DeleteUserResult>
+    savePublicMeditationsAsBenevolentUser: boolean = false,
+  ): Promise<DeleteUserResult>;
   ```
 - [x] Add user validation: query User table and verify user exists
 - [x] Add log: "Initiating user deletion for user ID: {userId}"
-- [x] Query `ContractUsersMantras` to get all mantraIds for the user
-- [x] Implement logic to filter mantras based on `savePublicMantrasAsBenevolentUser`:
-  - [x] If true: query Mantras table and filter to only private mantras
-  - [x] If false: include all user's mantras
-  - [x] Store in `userDeleteMantraIdsArray`
-- [x] Add log: "Found {count} mantra(s) to delete for user {userId}"
-- [x] Query `ContractMantrasElevenLabsFiles` to get elevenLabsFileIds for mantras
+- [x] Query `ContractUsersMeditations` to get all meditationIds for the user
+- [x] Implement logic to filter meditations based on `savePublicMeditationsAsBenevolentUser`:
+  - [x] If true: query Meditations table and filter to only private meditations
+  - [x] If false: include all user's meditations
+  - [x] Store in `userDeleteMeditationIdsArray`
+- [x] Add log: "Found {count} meditation(s) to delete for user {userId}"
+- [x] Query `ContractMeditationsElevenLabsFiles` to get elevenLabsFileIds for meditations
 - [x] Store unique ElevenLabs file IDs in `elevenLabsFileIdsArray`
-- [x] Add log: "Found {count} ElevenLabs files associated with mantras to delete"
+- [x] Add log: "Found {count} ElevenLabs files associated with meditations to delete"
 - [x] Query `ElevenLabsFiles` table to get file paths
 - [x] Create array of full paths: `{ id, fullPath: path.join(filePath, filename) }`
 - [x] Add log: "Retrieved file paths for {count} ElevenLabs files"
@@ -51,6 +52,7 @@ Implement a modular user deletion process that handles file cleanup, database re
 ---
 
 ## PHASE 2: Filesystem Cleanup
+
 **Delete physical files from the filesystem**
 
 - [x] Implement ElevenLabs file deletion loop:
@@ -61,53 +63,55 @@ Implement a modular user deletion process that handles file cleanup, database re
   - [x] Catch and log errors but continue processing
   - [x] Track success count
 - [x] Add summary log: "Deleted {successCount} of {totalCount} ElevenLabs files"
-- [x] Query Mantras table where `id IN userDeleteMantraIdsArray` to get file paths
-- [x] Implement mantra MP3 file deletion loop:
-  - [x] For each mantra, determine full path (filePath or PATH_MP3_OUTPUT fallback)
+- [x] Query Meditations table where `id IN userDeleteMeditationIdsArray` to get file paths
+- [x] Implement meditation MP3 file deletion loop:
+  - [x] For each meditation, determine full path (filePath or PATH_MP3_OUTPUT fallback)
   - [x] Check if file exists with `fs.existsSync()`
   - [x] If exists, delete with `fs.unlinkSync()`
-  - [x] Add success log: "Deleted mantra file: {fullPath}"
-  - [x] If not exists, add warning log: "Mantra file not found, skipping: {fullPath}"
+  - [x] Add success log: "Deleted meditation file: {fullPath}"
+  - [x] If not exists, add warning log: "Meditation file not found, skipping: {fullPath}"
   - [x] Catch and log errors but continue processing
   - [x] Track success count
-- [x] Add summary log: "Deleted {successCount} of {totalCount} mantra MP3 files"
+- [x] Add summary log: "Deleted {successCount} of {totalCount} meditation MP3 files"
 
 **Commit after completing Phase 2** ✅
 
 ---
 
 ## PHASE 3: Database Cleanup
+
 **Delete database records in proper order using transaction**
 
 - [x] Start database transaction using `sequelize.transaction()`
 - [x] Wrap database operations in try/catch
 - [x] Delete ElevenLabsFiles records where `id IN elevenLabsFileIdsArray`
 - [x] Add log: "Deleted {count} ElevenLabs file records from database"
-- [x] Delete Mantras records where `id IN userDeleteMantraIdsArray`
-  - [x] This cascades to: ContractUsersMantras, ContractMantrasElevenLabsFiles, ContractMantrasSoundFiles
-- [x] Add log: "Deleted {count} mantra records from database (cascade deletes contract tables)"
-- [x] Delete all ContractUserMantraListen records where `userId = {userId}`
+- [x] Delete Meditations records where `id IN userDeleteMeditationIdsArray`
+  - [x] This cascades to: ContractUsersMeditations, ContractMeditationsElevenLabsFiles, ContractMeditationsSoundFiles
+- [x] Add log: "Deleted {count} meditation records from database (cascade deletes contract tables)"
+- [x] Delete all ContractUserMeditationsListen records where `userId = {userId}`
 - [x] Add log: "Deleted {count} listen records for user {userId}"
 - [x] Delete Queue records where `userId = {userId}`
 - [x] Add log: "Deleted {count} queue records for user {userId}"
 - [x] Implement user record handling:
-  - [x] If `savePublicMantrasAsBenevolentUser === true`:
+  - [x] If `savePublicMeditationsAsBenevolentUser === true`:
     - [x] Update User: set email to `BenevolentUser{userId}@go-lightly.love`
     - [x] Update User: set isAdmin to false
     - [x] Add log: "User {userId} converted to benevolent user: BenevolentUser{userId}@go-lightly.love"
-  - [x] If `savePublicMantrasAsBenevolentUser === false`:
+  - [x] If `savePublicMeditationsAsBenevolentUser === false`:
     - [x] Delete User record where id = userId
     - [x] Add log: "Deleted user record for user {userId}"
 - [x] Commit transaction on success
 - [x] Rollback transaction on error and re-throw
 - [x] Add final log: "User deletion completed successfully for user ID: {userId}"
-- [x] Return result object with userId, mantrasDeleted, elevenLabsFilesDeleted, benevolentUserCreated
+- [x] Return result object with userId, meditationsDeleted, elevenLabsFilesDeleted, benevolentUserCreated
 
 **Commit after completing Phase 3** ✅
 
 ---
 
 ## PHASE 4: Admin Endpoint
+
 **Implement DELETE /admin/users/:userId**
 
 - [x] Open `/src/routes/admin.ts`
@@ -115,15 +119,15 @@ Implement a modular user deletion process that handles file cleanup, database re
 - [x] Create DELETE `/users/:userId` endpoint
 - [x] Extract userId from `req.params.userId` and parse to number
 - [x] Validate userId is a valid number
-- [x] Extract `savePublicMantrasAsBenevolentUser` from request body (default: false)
+- [x] Extract `savePublicMeditationsAsBenevolentUser` from request body (default: false)
 - [x] Add log: "Admin user {adminId} initiated deletion of user {userId}"
-- [x] Call `await deleteUser(userId, savePublicMantrasAsBenevolentUser)`
+- [x] Call `await deleteUser(userId, savePublicMeditationsAsBenevolentUser)`
 - [x] Return success response (200):
   ```json
   {
     "message": "User deleted successfully",
     "userId": number,
-    "mantrasDeleted": number,
+    "meditationsDeleted": number,
     "elevenLabsFilesDeleted": number,
     "benevolentUserCreated": boolean
   }
@@ -139,6 +143,7 @@ Implement a modular user deletion process that handles file cleanup, database re
 ---
 
 ## PHASE 5: Self-Service Endpoint
+
 **Implement DELETE /users/me**
 
 - [x] Open `/src/routes/users.ts`
@@ -146,15 +151,15 @@ Implement a modular user deletion process that handles file cleanup, database re
 - [x] Create DELETE `/me` endpoint
 - [x] Apply authMiddleware to the endpoint
 - [x] Extract userId from `req.user.userId` (from JWT token)
-- [x] Extract `savePublicMantrasAsBenevolentUser` from request body (default: false)
+- [x] Extract `savePublicMeditationsAsBenevolentUser` from request body (default: false)
 - [x] Add log: "User {userId} initiated self-deletion"
-- [x] Call `await deleteUser(userId, savePublicMantrasAsBenevolentUser)`
+- [x] Call `await deleteUser(userId, savePublicMeditationsAsBenevolentUser)`
 - [x] Return success response (200):
   ```json
   {
     "message": "Your account has been deleted successfully",
     "userId": number,
-    "mantrasDeleted": number,
+    "meditationsDeleted": number,
     "elevenLabsFilesDeleted": number,
     "benevolentUserCreated": boolean
   }
@@ -169,23 +174,24 @@ Implement a modular user deletion process that handles file cleanup, database re
 ---
 
 ## PHASE 6: Testing
+
 **Test all scenarios and edge cases**
 
 - [ ] Test admin endpoint: DELETE /admin/users/:userId
-  - [ ] With savePublicMantrasAsBenevolentUser=false (complete deletion)
-  - [ ] With savePublicMantrasAsBenevolentUser=true (keep public mantras)
+  - [ ] With savePublicMeditationsAsBenevolentUser=false (complete deletion)
+  - [ ] With savePublicMeditationsAsBenevolentUser=true (keep public meditations)
   - [ ] With invalid userId
   - [ ] With non-existent userId
   - [ ] Without admin privileges
 - [ ] Test self-service endpoint: DELETE /users/me
-  - [ ] With savePublicMantrasAsBenevolentUser=false
-  - [ ] With savePublicMantrasAsBenevolentUser=true
+  - [ ] With savePublicMeditationsAsBenevolentUser=false
+  - [ ] With savePublicMeditationsAsBenevolentUser=true
   - [ ] Without authentication
 - [ ] Test edge cases:
-  - [ ] User with no mantras
-  - [ ] User with only public mantras + savePublicMantrasAsBenevolentUser=true
-  - [ ] User with only private mantras + savePublicMantrasAsBenevolentUser=true
-  - [ ] User with no public mantras + savePublicMantrasAsBenevolentUser=true
+  - [ ] User with no meditations
+  - [ ] User with only public meditations + savePublicMeditationsAsBenevolentUser=true
+  - [ ] User with only private meditations + savePublicMeditationsAsBenevolentUser=true
+  - [ ] User with no public meditations + savePublicMeditationsAsBenevolentUser=true
   - [ ] Files already deleted from filesystem
   - [ ] Database records exist but files are missing
 - [ ] Verify logging output is comprehensive and correct
@@ -199,18 +205,19 @@ Implement a modular user deletion process that handles file cleanup, database re
 ---
 
 ## PHASE 7: Documentation
+
 **Create and update API documentation**
 
 - [x] Create `/docs/api/deleteUser.md` with:
   - [x] Overview of delete user functionality
   - [x] Documentation for DELETE /admin/users/:userId
   - [x] Documentation for DELETE /users/me
-  - [x] Request body schema with savePublicMantrasAsBenevolentUser explanation
+  - [x] Request body schema with savePublicMeditationsAsBenevolentUser explanation
   - [x] Sample requests for both endpoints
   - [x] Sample responses for success cases
   - [x] Error response examples
-  - [x] Examples with savePublicMantrasAsBenevolentUser=true
-  - [x] Examples with savePublicMantrasAsBenevolentUser=false
+  - [x] Examples with savePublicMeditationsAsBenevolentUser=true
+  - [x] Examples with savePublicMeditationsAsBenevolentUser=false
   - [x] Notes about benevolent user conversion
   - [x] Notes about what gets deleted
 - [x] Update `/docs/api/admin.md`:
@@ -228,24 +235,28 @@ Implement a modular user deletion process that handles file cleanup, database re
 ## Implementation Notes
 
 ### Error Handling Strategy
+
 - Wrap entire process in try/catch
 - Use database transaction for all database operations (rollback on error)
 - File deletion failures should log warnings but NOT fail the process
 - Return appropriate HTTP status codes
 
 ### Logging Strategy
+
 - **info** level: Normal progress updates at each step
 - **warn** level: File not found (skip and continue)
 - **error** level: Database errors, critical failures
 
 ### Edge Cases to Handle
-1. User has no mantras → skip file deletion, process normally
-2. User has no public mantras but savePublicMantrasAsBenevolentUser=true → deletes all mantras, converts to benevolent user
+
+1. User has no meditations → skip file deletion, process normally
+2. User has no public meditations but savePublicMeditationsAsBenevolentUser=true → deletes all meditations, converts to benevolent user
 3. Files already deleted → log warning, continue
 4. Self-deletion invalidates user's token → expected behavior
 
 ### Important Constraints
-- Sound files are NOT deleted (shared across multiple mantras)
+
+- Sound files are NOT deleted (shared across multiple meditations)
 - Queue records ARE deleted for the user
-- ALL ContractUserMantraListen records deleted for user
+- ALL ContractUserMeditationsListen records deleted for user
 - Benevolent user: only email and isAdmin change, everything else stays same

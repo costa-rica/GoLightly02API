@@ -2,7 +2,7 @@ import { Router, Request, Response, NextFunction } from "express";
 import fs from "fs";
 import path from "path";
 import multer from "multer";
-import { sequelize } from "mantrify01db";
+import { sequelize } from "golightly02db";
 import { authMiddleware } from "../modules/authMiddleware";
 import { adminMiddleware } from "../modules/adminMiddleware";
 import { AppError, ErrorCodes } from "../modules/errorHandler";
@@ -206,9 +206,7 @@ router.get(
   "/backups-list",
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      logger.info(
-        `Admin user ${req.user?.userId} requested backup list`,
-      );
+      logger.info(`Admin user ${req.user?.userId} requested backup list`);
 
       const projectResourcesPath = process.env.PATH_PROJECT_RESOURCES;
       if (!projectResourcesPath) {
@@ -268,7 +266,9 @@ router.get(
       );
 
       const filteredBackups = backups
-        .filter((backup): backup is NonNullable<typeof backup> => backup !== null)
+        .filter(
+          (backup): backup is NonNullable<typeof backup> => backup !== null,
+        )
         .sort(
           (a, b) =>
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
@@ -501,7 +501,9 @@ router.post(
 
         await extractZip(uploadedFilePath, extractionDir);
 
-        const findCsvRoot = async (rootPath: string): Promise<string | null> => {
+        const findCsvRoot = async (
+          rootPath: string,
+        ): Promise<string | null> => {
           const entries = await fs.promises.readdir(rootPath, {
             withFileTypes: true,
           });

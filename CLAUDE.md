@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Mantrify01API is a TypeScript/Express.js REST API for meditation mantra creation and management. It integrates with the Mantrify01Queuer service for audio processing and uses a custom Mantrify01Db SQLite/Sequelize package for data persistence. The system supports user authentication with email verification and JWT-based session management.
+GoLightly02API is a TypeScript/Express.js REST API for meditation meditation creation and management. It integrates with the GoLightly02Queuer service for audio processing and uses a custom GoLightly02Db SQLite/Sequelize package for data persistence. The system supports user authentication with email verification and JWT-based session management.
 
 ## Build and Development Commands
 
@@ -29,10 +29,11 @@ The codebase follows a strict modularity principle: all helper functions and uti
 
 ### Database Integration
 
-Uses the **Mantrify01Db** custom package (located at `../Mantrify01Db`) which provides:
-- Sequelize models: `User`, `Mantra`, `Queue`, `SoundFiles`, `ContractUsersMantras`
+Uses the **GoLightly02Db** custom package (located at `../GoLightly02Db`) which provides:
+
+- Sequelize models: `User`, `Meditation`, `Queue`, `SoundFiles`, `ContractUsersMeditations`
 - Database initialization via `initModels()` and `sequelize.sync()`
-- Import pattern: `import { initModels, sequelize, User, Mantra } from "mantrify01db"`
+- Import pattern: `import { initModels, sequelize, User, Meditation } from "golightly02db"`
 
 Database must be initialized in `src/index.ts` before any models are used.
 
@@ -55,22 +56,24 @@ Database must be initialized in `src/index.ts` before any models are used.
    - Returns JWT access token (no expiration)
 
 4. **Protected Routes**:
-   - All `/mantras/*` endpoints require `authMiddleware`
+   - All `/meditations/*` endpoints require `authMiddleware`
    - Middleware extracts user from `Authorization: Bearer <token>` header
    - Attaches `req.user` with `{ userId, email }`
 
-### Mantra Creation Flow
+### Meditation Creation Flow
 
-`POST /mantras/create` accepts a `mantraArray` with three element types:
+`POST /meditations/create` accepts a `meditationArray` with three element types:
+
 - `pause`: `{ id, pause_duration }`
 - `text`: `{ id, text, voice_id, speed }`
 - `sound_file`: `{ id, sound_file }`
 
-The API forwards this to **Mantrify01Queuer** (`URL_MANTRIFY01QUEUER` + `/mantras/new`) and validates the response starts with "Processing batch requests from CSV file". The queuer handles all database updates for `Mantras`, `Queue`, and `ContractUsersMantras` tables.
+The API forwards this to **GoLightly02Queuer** (`URL_MANTRIFY01QUEUER` + `/meditations/new`) and validates the response starts with "Processing batch requests from CSV file". The queuer handles all database updates for `Meditations`, `Queue`, and `ContractUsersMeditations` tables.
 
-### Mantra Deletion
+### Meditation Deletion
 
-`DELETE /mantras/:id` verifies ownership via `ContractUsersMantras` table before:
+`DELETE /meditations/:id` verifies ownership via `ContractUsersMeditations` table before:
+
 1. Deleting the MP3 file from `PATH_MP3_OUTPUT`
 2. Removing the database record
 
@@ -102,6 +105,7 @@ Follows **docs/ERROR_REQUIREMENTS.md** standard format:
 ```
 
 `src/modules/errorHandler.ts` provides:
+
 - `AppError` class for throwing errors with codes
 - `ErrorCodes` constants (VALIDATION_ERROR, AUTH_FAILED, etc.)
 - `createErrorResponse()` utility
@@ -116,6 +120,7 @@ Uses Nodemailer with Gmail SMTP (requires app password in `EMAIL_PASSWORD`). Tem
 ## Critical Environment Variables
 
 Required for startup (validated in `src/modules/logger.ts` and `src/index.ts`):
+
 - `NODE_ENV`, `NAME_APP`, `PATH_TO_LOGS` (logging)
 - `PORT`, `JWT_SECRET` (server/auth)
 - `PATH_DATABASE`, `NAME_DB` (database)
@@ -127,12 +132,12 @@ Optional: `LOG_MAX_SIZE` (default 5MB), `LOG_MAX_FILES` (default 5)
 
 ## External Service Integration
 
-**Mantrify01Queuer**: Expects `POST /mantras/new` with `{ userId, mantraArray }` body. Success response must start with "Processing batch requests from CSV file" string. The queuer manages all mantra processing and database updates for mantra records.
+**GoLightly02Queuer**: Expects `POST /meditations/new` with `{ userId, meditationArray }` body. Success response must start with "Processing batch requests from CSV file" string. The queuer manages all meditation processing and database updates for meditation records.
 
 ## Code Style Guidelines
 
 - **No bold text** in section headings or list item beginnings (per docs/README-format.md)
 - Modular design: changes should be localized to single files
-- All database operations use Sequelize ORM via Mantrify01Db package
+- All database operations use Sequelize ORM via GoLightly02Db package
 - JWT tokens: email verification expires in 30min, access tokens don't expire
 - Email addresses normalized to lowercase before storage/lookup

@@ -1,13 +1,13 @@
 import {
   User,
-  Mantra,
-  ContractUsersMantras,
-  ContractUserMantraListen,
-  ContractMantrasElevenLabsFiles,
+  Meditation,
+  ContractUsersMeditations,
+  ContractUserMeditationsListen,
+  ContractMeditationsElevenLabsFiles,
   ElevenLabsFiles,
   Queue,
   sequelize,
-} from "mantrify01db";
+} from "golightly02db";
 import { Op } from "sequelize";
 import path from "path";
 import fs from "fs";
@@ -19,7 +19,7 @@ import { AppError, ErrorCodes } from "./errorHandler";
  */
 export interface DeleteUserResult {
   userId: number;
-  mantrasDeleted: number;
+  meditationsDeleted: number;
   elevenLabsFilesDeleted: number;
   benevolentUserCreated: boolean;
 }
@@ -36,12 +36,12 @@ interface ElevenLabsFileToDelete {
  * Delete a user and all associated data
  *
  * @param userId - The user ID to delete
- * @param savePublicMantrasAsBenevolentUser - If true, preserve public mantras and convert user to benevolent user
+ * @param savePublicMeditationsAsBenevolentUser - If true, preserve public meditations and convert user to benevolent user
  * @returns DeleteUserResult with counts of deleted items
  */
 export async function deleteUser(
   userId: number,
-  savePublicMantrasAsBenevolentUser: boolean = false
+  savePublicMeditationsAsBenevolentUser: boolean = false,
 ): Promise<DeleteUserResult> {
   logger.info(`Initiating user deletion for user ID: ${userId}`);
 
@@ -51,58 +51,59 @@ export async function deleteUser(
     throw new AppError(ErrorCodes.USER_NOT_FOUND, "User not found", 404);
   }
 
-  // Step 2: Get all mantras associated with this user
-  const userMantrasContracts = await ContractUsersMantras.findAll({
+  // Step 2: Get all meditations associated with this user
+  const userMeditationsContracts = await ContractUsersMeditations.findAll({
     where: { userId },
-    attributes: ["mantraId"],
+    attributes: ["meditationId"],
   });
 
-  const allUserMantraIds = userMantrasContracts.map(
-    (contract) => contract.get("mantraId") as number
+  const allUserMeditationIds = userMeditationsContracts.map(
+    (contract) => contract.get("meditationId") as number,
   );
 
-  // Step 3: Filter mantras based on savePublicMantrasAsBenevolentUser
-  let userDeleteMantraIdsArray: number[] = [];
+  // Step 3: Filter meditations based on savePublicMeditationsAsBenevolentUser
+  let userDeleteMeditationIdsArray: number[] = [];
 
-  if (allUserMantraIds.length > 0) {
-    if (savePublicMantrasAsBenevolentUser) {
-      // Only delete private mantras
-      const privateMantras = await Mantra.findAll({
+  if (allUserMeditationIds.length > 0) {
+    if (savePublicMeditationsAsBenevolentUser) {
+      // Only delete private meditations
+      const privateMeditations = await Meditation.findAll({
         where: {
-          id: { [Op.in]: allUserMantraIds },
+          id: { [Op.in]: allUserMeditationIds },
           visibility: "private",
         },
         attributes: ["id"],
       });
 
-      userDeleteMantraIdsArray = privateMantras.map(
-        (mantra) => mantra.get("id") as number
+      userDeleteMeditationIdsArray = privateMeditations.map(
+        (meditation) => meditation.get("id") as number,
       );
 
       logger.info(
-        `Found ${userDeleteMantraIdsArray.length} private mantra(s) to delete for user ${userId}`
+        `Found ${userDeleteMeditationIdsArray.length} private meditation(s) to delete for user ${userId}`,
       );
     } else {
-      // Delete all mantras
-      userDeleteMantraIdsArray = allUserMantraIds;
+      // Delete all meditations
+      userDeleteMeditationIdsArray = allUserMeditationIds;
       logger.info(
-        `Found ${userDeleteMantraIdsArray.length} mantra(s) to delete for user ${userId}`
+        `Found ${userDeleteMeditationIdsArray.length} meditation(s) to delete for user ${userId}`,
       );
     }
   } else {
-    logger.info(`User ${userId} has no mantras to delete`);
+    logger.info(`User ${userId} has no meditations to delete`);
   }
 
-  // Step 4: Get ElevenLabs file IDs associated with mantras to delete
+  // Step 4: Get ElevenLabs file IDs associated with meditations to delete
   let elevenLabsFileIdsArray: number[] = [];
 
-  if (userDeleteMantraIdsArray.length > 0) {
-    const elevenLabsContracts = await ContractMantrasElevenLabsFiles.findAll({
-      where: {
-        mantraId: { [Op.in]: userDeleteMantraIdsArray },
-      },
-      attributes: ["elevenLabsFileId"],
-    });
+  if (userDeleteMeditationIdsArray.length > 0) {
+    const elevenLabsContracts =
+      await ContractMeditationsElevenLabsFiles.findAll({
+        where: {
+          meditationId: { [Op.in]: userDeleteMeditationIdsArray },
+        },
+        attributes: ["elevenLabsFileId"],
+      });
 
     // Get unique ElevenLabs file IDs
     const uniqueIds = new Set<number>();
@@ -113,10 +114,10 @@ export async function deleteUser(
 
     elevenLabsFileIdsArray = Array.from(uniqueIds);
     logger.info(
-      `Found ${elevenLabsFileIdsArray.length} ElevenLabs file(s) associated with mantras to delete`
+      `Found ${elevenLabsFileIdsArray.length} ElevenLabs file(s) associated with meditations to delete`,
     );
   } else {
-    logger.info(`No mantras to delete, skipping ElevenLabs file lookup`);
+    logger.info(`No meditations to delete, skipping ElevenLabs file lookup`);
   }
 
   // Step 5: Get ElevenLabs file paths
@@ -143,7 +144,7 @@ export async function deleteUser(
     });
 
     logger.info(
-      `Retrieved file paths for ${elevenLabsFilesToDelete.length} ElevenLabs file(s)`
+      `Retrieved file paths for ${elevenLabsFilesToDelete.length} ElevenLabs file(s)`,
     );
   } else {
     logger.info(`No ElevenLabs files to retrieve paths for`);
@@ -161,37 +162,35 @@ export async function deleteUser(
         logger.info(`Deleted ElevenLabs file: ${file.fullPath}`);
         elevenLabsFilesDeletedCount++;
       } else {
-        logger.warn(
-          `ElevenLabs file not found, skipping: ${file.fullPath}`
-        );
+        logger.warn(`ElevenLabs file not found, skipping: ${file.fullPath}`);
       }
     } catch (error: any) {
       logger.error(
-        `Failed to delete ElevenLabs file ${file.fullPath}: ${error.message}`
+        `Failed to delete ElevenLabs file ${file.fullPath}: ${error.message}`,
       );
       // Continue processing even if file deletion fails
     }
   }
 
   logger.info(
-    `Deleted ${elevenLabsFilesDeletedCount} of ${elevenLabsFilesToDelete.length} ElevenLabs file(s)`
+    `Deleted ${elevenLabsFilesDeletedCount} of ${elevenLabsFilesToDelete.length} ElevenLabs file(s)`,
   );
 
-  // Step 7: Delete mantra MP3 files from filesystem
-  let mantraFilesDeletedCount = 0;
+  // Step 7: Delete meditation MP3 files from filesystem
+  let meditationFilesDeletedCount = 0;
 
-  if (userDeleteMantraIdsArray.length > 0) {
-    const mantrasToDelete = await Mantra.findAll({
+  if (userDeleteMeditationIdsArray.length > 0) {
+    const meditationsToDelete = await Meditation.findAll({
       where: {
-        id: { [Op.in]: userDeleteMantraIdsArray },
+        id: { [Op.in]: userDeleteMeditationIdsArray },
       },
       attributes: ["id", "filePath", "filename"],
     });
 
-    for (const mantra of mantrasToDelete) {
+    for (const meditation of meditationsToDelete) {
       try {
-        const dbFilePath = mantra.get("filePath") as string | null;
-        const filename = mantra.get("filename") as string | null;
+        const dbFilePath = meditation.get("filePath") as string | null;
+        const filename = meditation.get("filename") as string | null;
 
         if (filename) {
           let fullPath: string;
@@ -202,7 +201,7 @@ export async function deleteUser(
             const outputPath = process.env.PATH_MP3_OUTPUT;
             if (!outputPath) {
               logger.warn(
-                `PATH_MP3_OUTPUT not configured, skipping mantra file deletion for mantra ${mantra.get("id")}`
+                `PATH_MP3_OUTPUT not configured, skipping meditation file deletion for meditation ${meditation.get("id")}`,
               );
               continue;
             }
@@ -211,28 +210,28 @@ export async function deleteUser(
 
           if (fs.existsSync(fullPath)) {
             fs.unlinkSync(fullPath);
-            logger.info(`Deleted mantra file: ${fullPath}`);
-            mantraFilesDeletedCount++;
+            logger.info(`Deleted meditation file: ${fullPath}`);
+            meditationFilesDeletedCount++;
           } else {
-            logger.warn(`Mantra file not found, skipping: ${fullPath}`);
+            logger.warn(`Meditation file not found, skipping: ${fullPath}`);
           }
         }
       } catch (error: any) {
         logger.error(
-          `Failed to delete mantra file for mantra ${mantra.get("id")}: ${error.message}`
+          `Failed to delete meditation file for meditation ${meditation.get("id")}: ${error.message}`,
         );
         // Continue processing even if file deletion fails
       }
     }
 
     logger.info(
-      `Deleted ${mantraFilesDeletedCount} of ${mantrasToDelete.length} mantra MP3 file(s)`
+      `Deleted ${meditationFilesDeletedCount} of ${meditationsToDelete.length} meditation MP3 file(s)`,
     );
   }
 
   // PHASE 3: Database Cleanup
 
-  let mantrasDeletedCount = 0;
+  let meditationsDeletedCount = 0;
   let benevolentUserCreated = false;
 
   const transaction = await sequelize.transaction();
@@ -247,31 +246,33 @@ export async function deleteUser(
         transaction,
       });
       logger.info(
-        `Deleted ${deletedElevenLabsCount} ElevenLabs file record(s) from database`
+        `Deleted ${deletedElevenLabsCount} ElevenLabs file record(s) from database`,
       );
     }
 
-    // Step 9: Delete Mantra records (cascades to contract tables)
-    if (userDeleteMantraIdsArray.length > 0) {
-      mantrasDeletedCount = await Mantra.destroy({
+    // Step 9: Delete Meditation records (cascades to contract tables)
+    if (userDeleteMeditationIdsArray.length > 0) {
+      meditationsDeletedCount = await Meditation.destroy({
         where: {
-          id: { [Op.in]: userDeleteMantraIdsArray },
+          id: { [Op.in]: userDeleteMeditationIdsArray },
         },
         transaction,
       });
       logger.info(
-        `Deleted ${mantrasDeletedCount} mantra record(s) from database (cascade deletes contract tables)`
+        `Deleted ${meditationsDeletedCount} meditation record(s) from database (cascade deletes contract tables)`,
       );
     }
 
     // Step 10: Delete all user's listen records
-    const deletedListenCount = await ContractUserMantraListen.destroy({
+    const deletedListenCount = await ContractUserMeditationsListen.destroy({
       where: {
         userId,
       },
       transaction,
     });
-    logger.info(`Deleted ${deletedListenCount} listen record(s) for user ${userId}`);
+    logger.info(
+      `Deleted ${deletedListenCount} listen record(s) for user ${userId}`,
+    );
 
     // Step 11: Delete queue records
     const deletedQueueCount = await Queue.destroy({
@@ -280,10 +281,12 @@ export async function deleteUser(
       },
       transaction,
     });
-    logger.info(`Deleted ${deletedQueueCount} queue record(s) for user ${userId}`);
+    logger.info(
+      `Deleted ${deletedQueueCount} queue record(s) for user ${userId}`,
+    );
 
     // Step 12: Handle user record
-    if (savePublicMantrasAsBenevolentUser) {
+    if (savePublicMeditationsAsBenevolentUser) {
       // Convert to benevolent user
       await User.update(
         {
@@ -293,11 +296,11 @@ export async function deleteUser(
         {
           where: { id: userId },
           transaction,
-        }
+        },
       );
       benevolentUserCreated = true;
       logger.info(
-        `User ${userId} converted to benevolent user: BenevolentUser${userId}@go-lightly.love`
+        `User ${userId} converted to benevolent user: BenevolentUser${userId}@go-lightly.love`,
       );
     } else {
       // Delete user completely
@@ -315,7 +318,7 @@ export async function deleteUser(
 
     return {
       userId,
-      mantrasDeleted: mantrasDeletedCount,
+      meditationsDeleted: meditationsDeletedCount,
       elevenLabsFilesDeleted: elevenLabsFilesDeletedCount,
       benevolentUserCreated,
     };

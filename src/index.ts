@@ -7,7 +7,7 @@ dotenv.config();
 import logger from "./modules/logger";
 
 // Import database
-import { initModels, sequelize } from "mantrify01db";
+import { initModels, sequelize } from "golightly02db";
 
 // Import Express and middleware
 import express, { Request, Response } from "express";
@@ -15,7 +15,7 @@ import cors from "cors";
 
 // Import routers
 import usersRouter from "./routes/users";
-import mantrasRouter from "./routes/mantras";
+import meditationsRouter from "./routes/meditations";
 import soundsRouter from "./routes/sounds";
 import adminRouter from "./routes/admin";
 import databaseRouter from "./routes/database";
@@ -29,7 +29,7 @@ import { runStartupChecks } from "./modules/onStartUp";
 // Async IIFE to allow early exit with proper cleanup
 (async () => {
   try {
-    logger.info("Starting Mantrify01API...");
+    logger.info("Starting GoLightly02API...");
 
     // Validate required environment variables
     const requiredVars = [
@@ -45,10 +45,10 @@ import { runStartupChecks } from "./modules/onStartUp";
 
     if (missingVars.length > 0) {
       logger.error(
-        `Missing required environment variables: ${missingVars.join(", ")}`
+        `Missing required environment variables: ${missingVars.join(", ")}`,
       );
       console.error(
-        `[FATAL] Missing required environment variables: ${missingVars.join(", ")}`
+        `[FATAL] Missing required environment variables: ${missingVars.join(", ")}`,
       );
       await new Promise((resolve) => setTimeout(resolve, 100));
       process.exit(1);
@@ -67,12 +67,12 @@ import { runStartupChecks } from "./modules/onStartUp";
 
     // Health check endpoint
     app.get("/health", (req: Request, res: Response) => {
-      res.status(200).json({ status: "ok", service: "Mantrify01API" });
+      res.status(200).json({ status: "ok", service: "GoLightly02API" });
     });
 
     // Register routers
     app.use("/users", usersRouter);
-    app.use("/mantras", mantrasRouter);
+    app.use("/meditations", meditationsRouter);
     app.use("/sounds", soundsRouter);
     app.use("/admin", adminRouter);
     app.use("/database", databaseRouter);
@@ -86,7 +86,7 @@ import { runStartupChecks } from "./modules/onStartUp";
     // Start server
     const PORT = parseInt(process.env.PORT!, 10);
     app.listen(PORT, () => {
-      logger.info(`Mantrify01API server running on port ${PORT}`);
+      logger.info(`GoLightly02API server running on port ${PORT}`);
       logger.info(`Environment: ${process.env.NODE_ENV}`);
       logger.info(`Health check available at: http://localhost:${PORT}/health`);
     });
