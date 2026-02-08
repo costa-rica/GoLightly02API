@@ -8,7 +8,7 @@ Sequelize will handle the createdAt and updatedAt columns with timestamps: true.
 
 ### Installation
 
-In your GoLightly02API or GoLightly02Queuer project, import the database package:
+In your GoLightly01API or GoLightly01Queuer project, import the database package:
 
 ```javascript
 import {
@@ -67,7 +67,7 @@ const user = await User.create({
 const meditation = await Meditation.create({
   title: "Morning Meditation",
   description: "A peaceful morning meditation meditation",
-  visibility: "private",
+  visibility: "public",
   filename: "morning-meditation.mp3",
   filePath: "/audio/meditations/morning-meditation.mp3",
 });
@@ -120,7 +120,7 @@ await user.save();
 ```javascript
 // Delete by condition
 await Meditation.destroy({
-  where: { visibility: "private", userId: userId },
+  where: { visibility: "public", userId: userId },
 });
 
 // Delete using an instance
@@ -180,7 +180,7 @@ const meditationWithSounds = await Meditation.findByPk(meditationId, {
 
 // Find meditation with user listen records
 const meditationWithListens = await Meditation.findByPk(meditationId, {
-  include: [{ association: "contractUserMeditationsListenCount" }],
+  include: [{ association: "contractUserMeditationListenCount" }],
 });
 
 // Find sound file with associated meditations
@@ -208,7 +208,7 @@ try {
   const meditation = await Meditation.create(
     {
       title: "User's First Meditation",
-      visibility: "private",
+      visibility: "public",
     },
     { transaction: t },
   );
@@ -259,7 +259,7 @@ try {
 | id          | id          | NO   | PK                                                                     |
 | title       | title       | NO   | name shown in UI                                                       |
 | description | description | YES  | public listing summary                                                 |
-| visibility  | visibility  | NO   | default `'private'`                                                    |
+| visibility  | visibility  | NO   | default `'public'`                                                     |
 | filename    | filename    | YES  | filename of the audio file                                             |
 | filePath    | filePath    | YES  | path to the audio file                                                 |
 | listenCount | integer     | NO   | default `0`, tracks non-registered user listens for public meditations |
@@ -268,7 +268,7 @@ try {
 
 - belongsToMany User through ContractUsersMeditations (as "users")
 - hasMany ContractUsersMeditations (as "contractUsersMeditations")
-- hasMany ContractUserMeditationsListen (as "contractUserMeditationsListenCount")
+- hasMany ContractUserMeditationsListen (as "contractUserMeditationListenCount")
 - belongsToMany ElevenLabsFiles through ContractMeditationsElevenLabsFiles (as "elevenLabsFiles")
 - belongsToMany SoundFiles through ContractMeditationsSoundFiles (as "soundFiles")
 

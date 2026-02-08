@@ -494,7 +494,7 @@ router.post(
   "/create",
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { meditationArray } = req.body;
+      const { meditationArray, title, description } = req.body;
 
       // Validate meditationArray exists
       if (!meditationArray || !Array.isArray(meditationArray)) {
@@ -536,6 +536,8 @@ router.post(
         body: JSON.stringify({
           userId: req.user?.userId,
           meditationArray,
+          title,
+          description,
         }),
       });
 

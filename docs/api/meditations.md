@@ -18,8 +18,10 @@ Creates a new meditation meditation by combining pauses, text-to-speech, and sou
 Request body:
 
 - `meditationArray` (array, required): Array of meditation elements in sequence
+- `title` (string, optional): Title for the meditation
+- `description` (string, optional): Description for the meditation
 
-Each element must have an `id` and one of the following:
+Each meditation array element must have an `id` and one of the following:
 
 - `pause_duration` (string): Duration in seconds (e.g., "3.0")
 - `text` (string): Text to convert to speech with optional `voice_id` and `speed`
@@ -32,6 +34,8 @@ curl --location 'http://localhost:3000/meditations/create' \
 --header 'Content-Type: application/json' \
 --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' \
 --data '{
+  "title": "Morning Meditation",
+  "description": "A peaceful meditation to start your day",
   "meditationArray": [
     {
       "id": 1,
@@ -118,6 +122,13 @@ Sound file element:
 - `id` (number): Unique identifier for the element
 - `sound_file` (string): Filename from the sound_files endpoint
 
+### Notes
+
+- The `title` and `description` fields are optional and will be forwarded to GoLightly02Queuer
+- The queuer service is responsible for saving the title and description to the Meditations table
+- If title or description are not provided, they will be sent as `undefined` to the queuer
+- The queuer handles all database operations for meditation creation
+
 ## GET /meditations/:id/stream
 
 Streams a meditation MP3 file with automatic listen tracking.
@@ -135,8 +146,8 @@ URL parameters:
 
 ### Authorization Logic
 
-- **Public meditations** (visibility != "private"): Can be streamed by anyone (authenticated or anonymous)
-- **Private meditations** (visibility == "private"): Require authentication and user must own the meditation via ContractUsersMeditations
+- **Public meditations** (visibility == "public"): Can be streamed by anyone (authenticated or anonymous)
+- **Private meditations** (visibility != "public"): Require authentication and user must own the meditation via ContractUsersMeditations
 
 ### Listen Tracking
 
@@ -396,7 +407,7 @@ Authenticated user response (public meditations + user's private meditations):
 
 ### Notes
 
-- Public meditations are those where `visibility` is not "private"
+- Private meditations are those where `visibility` is not "public"
 - Anonymous users can access the endpoint and will only receive public meditations
 - Authenticated users automatically receive:
   - All public meditations
