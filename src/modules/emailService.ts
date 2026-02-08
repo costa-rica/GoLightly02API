@@ -58,8 +58,8 @@ export const sendVerificationEmail = async (
     const templatePath = resolveTemplatePath("emailVerification.html");
     let htmlTemplate = fs.readFileSync(templatePath, "utf-8");
 
-    // Build verification URL (you may need to adjust this based on your frontend URL)
-    const verificationUrl = `http://localhost:${process.env.PORT}/users/verify?token=${token}`;
+    // Build verification URL
+    const verificationUrl = `${process.env.URL_BASE_WEBSITE}/users/verify?token=${token}`;
 
     // Replace placeholders in template
     htmlTemplate = htmlTemplate.replace("{{verificationUrl}}", verificationUrl);
