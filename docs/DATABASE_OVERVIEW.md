@@ -55,12 +55,33 @@ For development, you can use `sequelize.sync({ force: true })` to drop and recre
 ### Creating Records
 
 ```javascript
-// Create a new user
-const user = await User.create({
+// Create a new user with email/password (local auth)
+const localUser = await User.create({
   email: "user@example.com",
   password: "hashedPasswordHere",
   isEmailVerified: false,
   isAdmin: false,
+  authProvider: "local", // This is the default
+});
+
+// Create a new user with Google authentication only
+const googleUser = await User.create({
+  email: "googleuser@example.com",
+  password: null, // No password for Google-only users
+  isEmailVerified: true, // Google users are pre-verified
+  emailVerifiedAt: new Date(),
+  isAdmin: false,
+  authProvider: "google",
+});
+
+// Create a user with both authentication methods (linked account)
+const linkedUser = await User.create({
+  email: "linked@example.com",
+  password: "hashedPasswordHere",
+  isEmailVerified: true,
+  emailVerifiedAt: new Date(),
+  isAdmin: false,
+  authProvider: "both",
 });
 
 // Create a new meditation
@@ -234,14 +255,15 @@ try {
 
 #### Columns
 
-| Column          | Type            | Null | Notes                          |
-| --------------- | --------------- | ---- | ------------------------------ |
-| id              | id              | NO   | PK                             |
-| email           | email           | NO   | unique, normalized (lowercase) |
-| password        | password        | NO   | store bcrypt hash              |
-| isEmailVerified | isEmailVerified | NO   | default `false`                |
-| emailVerifiedAt | emailVerifiedAt | YES  | set upon verification          |
-| isAdmin         | isAdmin         | NO   | default `false`                |
+| Column          | Type            | Null | Notes                                                   |
+| --------------- | --------------- | ---- | ------------------------------------------------------- |
+| id              | id              | NO   | PK                                                      |
+| email           | email           | NO   | unique, normalized (lowercase)                          |
+| password        | password        | YES  | store bcrypt hash, null for Google-only auth users      |
+| isEmailVerified | isEmailVerified | NO   | default `false`                                         |
+| emailVerifiedAt | emailVerifiedAt | YES  | set upon verification                                   |
+| isAdmin         | isAdmin         | NO   | default `false`                                         |
+| authProvider    | string          | NO   | default `'local'`, values: 'local', 'google', or 'both' |
 
 #### Relationships
 

@@ -35,6 +35,7 @@ import { runStartupChecks } from "./modules/onStartUp";
     const requiredVars = [
       "PORT",
       "JWT_SECRET",
+      "GOOGLE_CLIENT_ID",
       "PATH_MP3_OUTPUT",
       "PATH_MP3_SOUND_FILES",
       "URL_MANTRIFY01QUEUER",

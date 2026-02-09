@@ -17,6 +17,7 @@ import logger from "../modules/logger";
 import { checkUserHasPublicMeditations } from "../modules/userPublicMeditations";
 import { deleteUser } from "../modules/deleteUser";
 import { authMiddleware } from "../modules/authMiddleware";
+import { verifyGoogleToken } from "../modules/googleAuth";
 
 const router = Router();
 
@@ -64,6 +65,15 @@ router.post(
       });
 
       if (existingUser) {
+        // Check if existing user has Google authentication
+        if (existingUser.authProvider === "google") {
+          throw new AppError(
+            ErrorCodes.GOOGLE_USER_EXISTS,
+            "An account with this email already exists. Please use Google Sign-In.",
+            409,
+          );
+        }
+
         throw new AppError(
           ErrorCodes.CONFLICT,
           "User with this email already exists",
@@ -80,6 +90,7 @@ router.post(
         password: hashedPassword,
         isEmailVerified: false,
         isAdmin: false,
+        authProvider: "local",
       });
 
       logger.info(`New user registered: ${normalizedEmail}`);
@@ -208,6 +219,15 @@ router.post(
         );
       }
 
+      // Check if user is Google-only (cannot login with password)
+      if (user.authProvider === "google") {
+        throw new AppError(
+          ErrorCodes.PASSWORD_AUTH_DISABLED,
+          "This account uses Google Sign-In. Please use the Google button to log in.",
+          403,
+        );
+      }
+
       // Check if email is verified
       if (!user.isEmailVerified) {
         throw new AppError(
@@ -252,6 +272,98 @@ router.post(
           email: user.email,
           isAdmin: user.isAdmin,
           hasPublicMeditations,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+// POST /users/google-auth
+router.post(
+  "/google-auth",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { idToken } = req.body;
+
+      // Validate input
+      if (!idToken) {
+        throw new AppError(
+          ErrorCodes.VALIDATION_ERROR,
+          "Google ID token is required",
+          400,
+        );
+      }
+
+      // Verify Google token
+      const googleUser = await verifyGoogleToken(idToken);
+
+      // Check if user exists
+      const existingUser = await User.findOne({
+        where: { email: googleUser.email },
+      });
+
+      let user: any;
+      let isNewUser = false;
+
+      if (!existingUser) {
+        // Create new user with Google authentication
+        user = await User.create({
+          email: googleUser.email,
+          password: null,
+          isEmailVerified: true,
+          emailVerifiedAt: new Date(),
+          isAdmin: false,
+          authProvider: "google",
+        });
+
+        isNewUser = true;
+        logger.info(
+          `New user registered via Google: ${googleUser.email}`,
+        );
+      } else {
+        user = existingUser;
+
+        // Handle account linking for existing local users
+        if (user.authProvider === "local") {
+          await User.update(
+            { authProvider: "both" },
+            { where: { id: user.id } },
+          );
+
+          logger.info(
+            `Linked Google account to existing user: ${user.email}`,
+          );
+        } else {
+          logger.info(`User logged in via Google: ${user.email}`);
+        }
+      }
+
+      // Generate access token
+      const accessToken = generateAccessToken(
+        user.id as number,
+        user.email as string,
+      );
+
+      // Check if user has public meditations
+      const hasPublicMeditations = await checkUserHasPublicMeditations(
+        user.id as number,
+      );
+
+      const message = isNewUser
+        ? "Registration successful via Google"
+        : "Login successful via Google";
+
+      res.status(200).json({
+        message,
+        accessToken,
+        user: {
+          id: user.id,
+          email: user.email,
+          isAdmin: user.isAdmin,
+          hasPublicMeditations,
+          authProvider: user.authProvider === "local" ? "both" : user.authProvider,
         },
       });
     } catch (error) {

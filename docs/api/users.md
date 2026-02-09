@@ -89,6 +89,18 @@ curl --location 'http://localhost:3000/users/register' \
 }
 ```
 
+#### User exists with Google auth (409)
+
+```json
+{
+  "error": {
+    "code": "GOOGLE_USER_EXISTS",
+    "message": "An account with this email already exists. Please use Google Sign-In.",
+    "status": 409
+  }
+}
+```
+
 ## GET /users/verify
 
 Verifies a user's email address using the token sent during registration.
@@ -257,6 +269,128 @@ curl --location 'http://localhost:3000/users/login' \
   }
 }
 ```
+
+#### Google-only account (403)
+
+```json
+{
+  "error": {
+    "code": "PASSWORD_AUTH_DISABLED",
+    "message": "This account uses Google Sign-In. Please use the Google button to log in.",
+    "status": 403
+  }
+}
+```
+
+## POST /users/google-auth
+
+Authenticates a user via Google Sign-In and returns an access token.
+
+- Authentication: Not required
+- Verifies Google ID token server-side for security
+- Creates new account if email doesn't exist (with email pre-verified)
+- Links Google account to existing email/password accounts (updates authProvider to 'both')
+- Returns JWT access token with no expiration
+- Email addresses are normalized to lowercase
+
+### Parameters
+
+Request body:
+
+- `idToken` (string, required): Google ID token received from frontend Google Sign-In
+
+### Sample Request
+
+```bash
+curl --location 'http://localhost:3000/users/google-auth' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+  "idToken": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjY3..."
+}'
+```
+
+### Sample Response (New User)
+
+```json
+{
+  "message": "Registration successful via Google",
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": 1,
+    "email": "user@example.com",
+    "isAdmin": false,
+    "hasPublicMeditations": false,
+    "authProvider": "google"
+  }
+}
+```
+
+### Sample Response (Existing User)
+
+```json
+{
+  "message": "Login successful via Google",
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": 1,
+    "email": "user@example.com",
+    "isAdmin": false,
+    "hasPublicMeditations": true,
+    "authProvider": "both"
+  }
+}
+```
+
+### Response Fields
+
+- `message` (string): Success message indicating registration or login
+- `accessToken` (string): JWT token for authenticated requests
+- `user` (object): User information
+  - `id` (number): User ID
+  - `email` (string): User email address
+  - `isAdmin` (boolean): Whether user has admin privileges
+  - `hasPublicMeditations` (boolean): Whether user has any meditations with visibility set to "public"
+  - `authProvider` (string): Authentication method - "google", "local", or "both"
+
+### Authentication Provider Values
+
+- `google`: User can only login with Google Sign-In
+- `local`: User can only login with email/password
+- `both`: User can login with either Google Sign-In or email/password (accounts are linked)
+
+### Error Responses
+
+#### Missing ID token (400)
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Google ID token is required",
+    "status": 400
+  }
+}
+```
+
+#### Invalid or expired Google token (401)
+
+```json
+{
+  "error": {
+    "code": "INVALID_GOOGLE_TOKEN",
+    "message": "Failed to verify Google token",
+    "status": 401
+  }
+}
+```
+
+### Notes
+
+- When an existing email/password user signs in with Google for the first time, their account is automatically linked (authProvider becomes 'both')
+- Users with linked accounts can use either authentication method to login
+- New users created via Google Sign-In have their email automatically verified
+- Google tokens are verified server-side using Google's authentication library
+- Only email is stored from Google profile; other data is not persisted
 
 ## POST /users/forgot-password
 
